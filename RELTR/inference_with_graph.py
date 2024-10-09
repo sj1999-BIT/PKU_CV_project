@@ -193,10 +193,7 @@ def main(args):
 
         # Define the figure with gridspec
         fig = plt.figure(figsize=(22, 7))
-        gs = fig.add_gridspec(1, 2)
-
-        # Left side: multiple smaller subplots
-        left_ax = fig.add_subplot(gs[0, 0])
+        gs = fig.add_gridspec(1, 2, width_ratios=[1, 1])
 
         # Left side: multiple smaller subplots
         left_fig, axs = plt.subplots(ncols=len(indices), nrows=3, figsize=(22, 7), subplot_kw={'aspect': 'equal'})
@@ -219,10 +216,11 @@ def main(args):
             ax.axis('off')
 
 
-        left_fig.tight_layout()
+        left_fig.tight_layout()  
 
-        # Right side: large graph
-        right_ax = fig.add_subplot(gs[0, 0])
+        # Left side: multiple smaller subplots
+        left_ax = fig.add_subplot(gs[0, 0])
+        left_ax.axis('off')      
 
         # collect all the edges and nodes
         nodeSet = set()
@@ -251,22 +249,22 @@ def main(args):
 
         pos = nx.spring_layout(G, k=0.5)  # Adjust 'k' value to change spacing
         # Draw nodes
-        nx.draw_networkx_nodes(G, pos, ax=right_ax, node_color='lightblue', node_size=500)
+        nx.draw_networkx_nodes(G, pos, ax=left_ax, node_color='lightblue', node_size=500)
 
         # Draw edges
         for edge in G.edges(data=True):
             start, end, data = edge
             path = create_curved_edge(pos, start, end)
-            nx.draw_networkx_edges(G, pos, ax=right_ax, edgelist=[(start, end)], edge_color='gray',
+            nx.draw_networkx_edges(G, pos, ax=left_ax, edgelist=[(start, end)], edge_color='gray',
                                   connectionstyle=f'arc3,rad={0.2}', arrows=True)
 
 
         # Draw edge labels
         edge_labels = nx.get_edge_attributes(G, 'label')
-        nx.draw_networkx_edge_labels(G, pos, ax=right_ax, edge_labels=edge_labels, font_size=8)
+        nx.draw_networkx_edge_labels(G, pos, ax=left_ax, edge_labels=edge_labels, font_size=8)
 
         # Draw node labels
-        nx.draw_networkx_labels(G, pos, ax=right_ax, font_size=6, font_weight='bold')
+        nx.draw_networkx_labels(G, pos, ax=left_ax, font_size=6, font_weight='bold')
 
         plt.tight_layout()
 
