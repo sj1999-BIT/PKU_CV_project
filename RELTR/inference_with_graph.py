@@ -120,7 +120,7 @@ def main(args):
                 'to', 'under', 'using', 'walking in', 'walking on', 'watching', 'wearing', 'wears', 'with']
 
     model, _, _ = build_model(args)
-    ckpt = torch.load(args.resume)
+    ckpt = torch.load(args.resume, map_location = args.device)
     model.load_state_dict(ckpt['model'])
     model.eval()
 
