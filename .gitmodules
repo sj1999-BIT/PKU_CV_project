@@ -1,3 +1,6 @@
 [submodule "VidVRD-helper"]
 	path = VidVRD-helper
 	url = https://github.com/xdshang/VidVRD-helper.git
+[submodule "OED"]
+	path = OED
+	url = https://github.com/guanw-pku/OED.git
