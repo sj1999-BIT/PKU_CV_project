@@ -368,7 +368,7 @@ def process_video(input_path, output_directory):
             processed_frame = detectTR(frame)
 
             # Write the frame
-            out.write(processed_frame)
+            # out.write(processed_frame)
 
             pbar.update(1)
 
