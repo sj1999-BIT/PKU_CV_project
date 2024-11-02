@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/OED" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/RELTR" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/RELTR/sort" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/VidVRD-helper" vcs="Git" />
+  </component>
+</project>

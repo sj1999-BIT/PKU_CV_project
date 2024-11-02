@@ -11,6 +11,9 @@ import torchvision.transforms as T
 from models import build_model
 
 
+'''
+python inference_with_graph.py --img_path SJ_img/split.jpg --resume ckpt/checkpoint0149.pth
+'''
 
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
