@@ -88,8 +88,10 @@ def get_args_parser():
 transform = T.Compose([
     T.Resize(800),
     T.ToTensor(),
-    T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+    lambda x: x.cuda()
 ])
+
 
 # for output bounding box post-processing
 def box_cxcywh_to_xyxy(x):
@@ -98,11 +100,13 @@ def box_cxcywh_to_xyxy(x):
          (x_c + 0.5 * w), (y_c + 0.5 * h)]
     return torch.stack(b, dim=1)
 
+
 def rescale_bboxes(out_bbox, size):
     img_w, img_h = size
     b = box_cxcywh_to_xyxy(out_bbox)
-    b = b * torch.tensor([img_w, img_h, img_w, img_h], dtype=torch.float32)
+    b = b * torch.tensor([img_w, img_h, img_w, img_h], dtype=torch.float32).cuda()
     return b
+
 
 # VG classes
 CLASSES = [ 'N/A', 'airplane', 'animal', 'arm', 'bag', 'banana', 'basket', 'beach', 'bear', 'bed', 'bench', 'bike',
@@ -131,6 +135,8 @@ parser = argparse.ArgumentParser('RelTR inference', parents=[get_args_parser()])
 args = parser.parse_args()
 model, _, _ = build_model(args)
 
+# push to cuda
+model.cuda()
 
 ckpt = torch.load(args.resume)
 model.load_state_dict(ckpt['model'])
