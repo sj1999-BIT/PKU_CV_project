@@ -57,7 +57,7 @@ def get_args_parser():
 
     parser.add_argument('--device', default='cuda',
                         help='device to use for training / testing')
-    parser.add_argument('--resume', default='ckpt/checkpoint0149.pth', help='resume from checkpoint')
+    parser.add_argument('--resume', default='./ckpt/checkpoint0149.pth', help='resume from checkpoint')
     parser.add_argument('--set_cost_class', default=1, type=float,
                         help="Class coefficient in the matching cost")
     parser.add_argument('--set_cost_bbox', default=5, type=float,
@@ -88,6 +88,7 @@ transform = T.Compose([
 
 # for output bounding box post-processing
 def box_cxcywh_to_xyxy(x):
+    # unbind is a PyTorch operation that splits a tensor along a specified dimension into a tuple of tensors.
     x_c, y_c, w, h = x.unbind(1)
     b = [(x_c - 0.5 * w), (y_c - 0.5 * h),
          (x_c + 0.5 * w), (y_c + 0.5 * h)]
@@ -98,6 +99,13 @@ def rescale_bboxes(out_bbox, size):
     img_w, img_h = size
     b = box_cxcywh_to_xyxy(out_bbox)
     b = b * torch.tensor([img_w, img_h, img_w, img_h], dtype=torch.float32).cuda()
+    return b
+
+def rescale_bboxes_cxcywh(out_bbox, size):
+    img_w, img_h = size
+    # No need to convert to xyxy
+    # Just multiply each component by its corresponding image dimension
+    b = out_bbox * torch.tensor([img_w, img_h, img_w, img_h], dtype=torch.float32).cuda()
     return b
 
 
@@ -131,7 +139,11 @@ model, _, _ = build_model(args)
 # push to cuda
 model.cuda()
 
-ckpt = torch.load(args.resume)
+# Get the directory where cuda_model.py is located
+current_dir = os.path.dirname(os.path.abspath(__file__))
+checkpoint_path = os.path.join(current_dir, args.resume)
+ckpt = torch.load(checkpoint_path)
+
 model.load_state_dict(ckpt['model'])
 model.eval()
 
@@ -142,7 +154,9 @@ def model_inference(input_data):
     Args:
         input_data: Can be PIL Image, numpy array, or filepath (str)
     Returns:
-        model outputs
+        return a list of yolo obj_labels (label_index, center_x, center_y, height, width, confidence)
+        and a list of predicates (pred_index, sub_index, obj_index): sub_index, obj_index are referred
+        to the yolo_label_list.
     """
     # Convert input to PIL Image based on type
     if isinstance(input_data, str):
@@ -179,5 +193,37 @@ def model_inference(input_data):
 
     return outputs
 
+
+
+
+
+
+
 if __name__=="__main__":
-    model_inference("D:\Shui Jie\PHD school\Computational Vision\PKU_CV_project\YOLO_SG\coco_dataset\sample_img_data\images\000000000001.jpg")
+    outputs = model_inference("D:\Shui Jie\PHD school\Computational Vision\PKU_CV_project\YOLO_SG\coco_dataset\sample_img_data\images/000000000001.jpg")
+    """
+    Model output analysis:
+    - "pred_logits": the entity classification logits (including no-object) for all entity queries.
+                Shape= [batch_size x num_queries x (num_classes + 1)]
+    - "pred_boxes": the normalized entity boxes coordinates for all entity queries, represented as
+               (center_x, center_y, height, width). These values are normalized in [0, 1],
+               relative to the size of each individual image (disregarding possible padding).
+               See PostProcess for information on how to retrieve the unnormalized bounding box.
+    - "sub_logits": the subject classification logits
+    - "obj_logits": the object classification logits
+    - "sub_boxes": the normalized subject boxes coordinates
+    - "obj_boxes": the normalized object boxes coordinates
+    - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
+                dictionnaries containing the two above keys for each decoder layer.
+    """
+    print(outputs.keys())
+
+    print(f"rel_logits: {outputs['rel_logits']} ")
+    # keep only predictions with 0.+ confidence
+    # all obj logit list is shaped (1, 200, 152) and pred logit list is shaped (1, 100, 152)
+    # fixed 200 queries for objects and 100 queries for logit
+    probas = outputs['rel_logits'].softmax(-1)[0, :, :-1]
+    probas_sub = outputs['sub_logits'].softmax(-1)[0, :, :-1]
+    probas_obj = outputs['obj_logits'].softmax(-1)[0, :, :-1]
+    keep = torch.logical_and(probas.max(-1).values > 0.3, torch.logical_and(probas_sub.max(-1).values > 0.3,
+                                                                            probas_obj.max(-1).values > 0.3))

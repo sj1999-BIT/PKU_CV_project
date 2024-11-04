@@ -170,7 +170,7 @@ def evaluate_rel_batch(outputs, targets, evaluator, evaluator_list):
     for batch, target in enumerate(targets):
         target_bboxes_scaled = rescale_bboxes(target['boxes'].cpu(), torch.flip(target['orig_size'],dims=[0]).cpu()).clone().numpy() # recovered boxes with original size
 
-        gt_entry = {'gt_classes': target['labels'].cpu().clone().numpy(),
+        gt_entry = {'gt_classes': target['obj_labels'].cpu().clone().numpy(),
                     'gt_relations': target['rel_annotations'].cpu().clone().numpy(),
                     'gt_boxes': target_bboxes_scaled}
 
@@ -216,9 +216,9 @@ def evaluate_rel_batch_oi(outputs, targets, all_results):
 
         relation_idx = target['rel_annotations'].cpu().numpy()
         gt_sub_boxes = target_bboxes_scaled[relation_idx[:, 0]]
-        gt_sub_labels = target['labels'][relation_idx[:, 0]].cpu().clone().numpy()
+        gt_sub_labels = target['obj_labels'][relation_idx[:, 0]].cpu().clone().numpy()
         gt_obj_boxes = target_bboxes_scaled[relation_idx[:, 1]]
-        gt_obj_labels = target['labels'][relation_idx[:, 1]].cpu().clone().numpy()
+        gt_obj_labels = target['obj_labels'][relation_idx[:, 1]].cpu().clone().numpy()
 
         img_result_dict = {'sbj_boxes': sub_bboxes_scaled,
                            'sbj_labels': pred_sub_classes.cpu().clone().numpy(),

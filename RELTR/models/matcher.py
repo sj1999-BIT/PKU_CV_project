@@ -43,8 +43,8 @@ class HungarianMatcher(nn.Module):
                  "rel_logits":  Tensor of dim [batch_size, num_triplets, num_predicate_classes] with the predicate classification logits
 
             targets: This is a list of targets (len(targets) = batch_size), where each target is a dict containing:
-                 "labels": Tensor of dim [num_target_boxes] (where num_target_boxes is the number of ground-truth
-                           objects in the target) containing the class labels
+                 "obj_labels": Tensor of dim [num_target_boxes] (where num_target_boxes is the number of ground-truth
+                           objects in the target) containing the class obj_labels
                  "boxes": Tensor of dim [num_target_boxes, 4] containing the target box coordinates
                  "image_id": Image index
                  "orig_size": Tensor of dim [2] with the height and width
@@ -69,8 +69,8 @@ class HungarianMatcher(nn.Module):
         out_prob = outputs["pred_logits"].flatten(0, 1).sigmoid()
         out_bbox = outputs["pred_boxes"].flatten(0, 1)
 
-        # Also concat the target labels and boxes
-        tgt_ids = torch.cat([v["labels"] for v in targets])
+        # Also concat the target obj_labels and boxes
+        tgt_ids = torch.cat([v["obj_labels"] for v in targets])
         tgt_bbox = torch.cat([v["boxes"] for v in targets])
 
         # Compute the entity classification cost. We borrow the cost function from Deformable DETR (https://arxiv.org/abs/2010.04159)
@@ -91,11 +91,11 @@ class HungarianMatcher(nn.Module):
         sizes = [len(v["boxes"]) for v in targets]
         indices = [linear_sum_assignment(c[i]) for i, c in enumerate(C.split(sizes, -1))]
 
-        # Concat the subject/object/predicate labels and subject/object boxes
+        # Concat the subject/object/predicate obj_labels and subject/object boxes
         sub_tgt_bbox = torch.cat([v['boxes'][v['rel_annotations'][:, 0]] for v in targets])
-        sub_tgt_ids = torch.cat([v['labels'][v['rel_annotations'][:, 0]] for v in targets])
+        sub_tgt_ids = torch.cat([v['obj_labels'][v['rel_annotations'][:, 0]] for v in targets])
         obj_tgt_bbox = torch.cat([v['boxes'][v['rel_annotations'][:, 1]] for v in targets])
-        obj_tgt_ids = torch.cat([v['labels'][v['rel_annotations'][:, 1]] for v in targets])
+        obj_tgt_ids = torch.cat([v['obj_labels'][v['rel_annotations'][:, 1]] for v in targets])
         rel_tgt_ids = torch.cat([v["rel_annotations"][:, 2] for v in targets])
 
         sub_prob = outputs["sub_logits"].flatten(0, 1).sigmoid()
