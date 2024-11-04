@@ -19,10 +19,10 @@ def pairwise(iterable):
 
 def get_ranking(predictions, labels, num_guesses=5):
     """
-    Given a matrix of predictions and labels for the correct ones, get the number of guesses
+    Given a matrix of predictions and obj_labels for the correct ones, get the number of guesses
     required to get the prediction right per example.
     :param predictions: [batch_size, range_size] predictions
-    :param labels: [batch_size] array of labels
+    :param labels: [batch_size] array of obj_labels
     :param num_guesses: Number of guesses to return
     :return:
     """

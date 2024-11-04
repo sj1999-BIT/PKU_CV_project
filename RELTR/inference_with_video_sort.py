@@ -228,7 +228,7 @@ def detectTR(frame):
 
 
     # based on the function, we need
-    # 1. keep_queries: provides idx for us to locate the labels for sub, obj, pred
+    # 1. keep_queries: provides idx for us to locate the obj_labels for sub, obj, pred
     # 2. sub_bboxes_scaled[indices] and obj_bboxes_scaled[indices]: contains x1, y1, x2, y2 for subject bounding boxes
     # 3. probas_sub, probas_obj, probas: contains list of indexes, can be used to locate the highest probable label.
     # 4. frame: the numpy image frame
