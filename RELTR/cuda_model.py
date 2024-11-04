@@ -178,3 +178,6 @@ def model_inference(input_data):
         outputs = model(img)
 
     return outputs
+
+if __name__=="__main__":
+    model_inference("D:\Shui Jie\PHD school\Computational Vision\PKU_CV_project\YOLO_SG\coco_dataset\sample_img_data\images\000000000001.jpg")

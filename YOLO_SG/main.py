@@ -1,2 +1,4 @@
-from RELTR.models import build_model
+from RELTR import cuda_model
+
+
 

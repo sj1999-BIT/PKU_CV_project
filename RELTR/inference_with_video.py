@@ -242,8 +242,6 @@ def detectTR(frame):
         oxmax = int(oxmax.item())
         oymax = int(oymax.item())
 
-
-
         subject = CLASSES[probas_sub[idx].argmax()]
         object = CLASSES[probas_obj[idx].argmax()]
         predicate = REL_CLASSES[probas[idx].argmax()]
