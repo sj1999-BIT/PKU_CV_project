@@ -85,7 +85,7 @@ class CocoEvaluator(object):
             boxes = prediction["boxes"]
             boxes = convert_to_xywh(boxes).tolist()
             scores = prediction["scores"].tolist()
-            labels = prediction["labels"].tolist()
+            labels = prediction["obj_labels"].tolist()
 
             coco_results.extend(
                 [
@@ -107,13 +107,13 @@ class CocoEvaluator(object):
                 continue
 
             scores = prediction["scores"]
-            labels = prediction["labels"]
+            labels = prediction["obj_labels"]
             masks = prediction["masks"]
 
             masks = masks > 0.5
 
             scores = prediction["scores"].tolist()
-            labels = prediction["labels"].tolist()
+            labels = prediction["obj_labels"].tolist()
 
             rles = [
                 mask_util.encode(np.array(mask[0, :, :, np.newaxis], dtype=np.uint8, order="F"))[0]
@@ -144,7 +144,7 @@ class CocoEvaluator(object):
             boxes = prediction["boxes"]
             boxes = convert_to_xywh(boxes).tolist()
             scores = prediction["scores"].tolist()
-            labels = prediction["labels"].tolist()
+            labels = prediction["obj_labels"].tolist()
             keypoints = prediction["keypoints"]
             keypoints = keypoints.flatten(start_dim=1).tolist()
 

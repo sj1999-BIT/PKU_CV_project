@@ -170,7 +170,7 @@ class SetCriterion(nn.Module):
         pred_logits = outputs['pred_logits']
 
         idx = self._get_src_permutation_idx(indices[0])
-        target_classes_o = torch.cat([t["labels"][J] for t, (_, J) in zip(targets, indices[0])])
+        target_classes_o = torch.cat([t["obj_labels"][J] for t, (_, J) in zip(targets, indices[0])])
         target_classes = torch.full(pred_logits.shape[:2], self.num_classes, dtype=torch.int64, device=pred_logits.device)
         target_classes[idx] = target_classes_o
 
@@ -178,8 +178,8 @@ class SetCriterion(nn.Module):
         obj_logits = outputs['obj_logits']
 
         rel_idx = self._get_src_permutation_idx(indices[1])
-        target_rels_classes_o = torch.cat([t["labels"][t["rel_annotations"][J, 0]] for t, (_, J) in zip(targets, indices[1])])
-        target_relo_classes_o = torch.cat([t["labels"][t["rel_annotations"][J, 1]] for t, (_, J) in zip(targets, indices[1])])
+        target_rels_classes_o = torch.cat([t["obj_labels"][t["rel_annotations"][J, 0]] for t, (_, J) in zip(targets, indices[1])])
+        target_relo_classes_o = torch.cat([t["obj_labels"][t["rel_annotations"][J, 1]] for t, (_, J) in zip(targets, indices[1])])
 
         target_sub_classes = torch.full(sub_logits.shape[:2], self.num_classes, dtype=torch.int64, device=sub_logits.device)
         target_obj_classes = torch.full(obj_logits.shape[:2], self.num_classes, dtype=torch.int64, device=obj_logits.device)
@@ -277,7 +277,7 @@ class SetCriterion(nn.Module):
 
     def get_loss(self, loss, outputs, targets, indices, num_boxes, **kwargs):
         loss_map = {
-            'labels': self.loss_labels,
+            'obj_labels': self.loss_labels,
             'cardinality': self.loss_cardinality,
             'boxes': self.loss_boxes,
             'relations': self.loss_relations
@@ -299,7 +299,7 @@ class SetCriterion(nn.Module):
         self.indices = indices
 
         # Compute the average number of target boxes accross all nodes, for normalization purposes
-        num_boxes = sum(len(t["labels"])+len(t["rel_annotations"]) for t in targets)
+        num_boxes = sum(len(t["obj_labels"])+len(t["rel_annotations"]) for t in targets)
         num_boxes = torch.as_tensor([num_boxes], dtype=torch.float, device=next(iter(outputs.values())).device)
         if is_dist_avail_and_initialized():
             torch.distributed.all_reduce(num_boxes)
@@ -316,7 +316,7 @@ class SetCriterion(nn.Module):
                 indices = self.matcher(aux_outputs, targets)
                 for loss in self.losses:
                     kwargs = {}
-                    if loss == 'labels' or loss == 'relations':
+                    if loss == 'obj_labels' or loss == 'relations':
                         # Logging is enabled only for the last layer
                         kwargs = {'log': False}
                     l_dict = self.get_loss(loss, aux_outputs, targets, indices, num_boxes, **kwargs)
@@ -353,7 +353,7 @@ class PostProcess(nn.Module):
         scale_fct = torch.stack([img_w, img_h, img_w, img_h], dim=1)
         boxes = boxes * scale_fct[:, None, :]
 
-        results = [{'scores': s, 'labels': l, 'boxes': b} for s, l, b in zip(scores, labels, boxes)]
+        results = [{'scores': s, 'obj_labels': l, 'boxes': b} for s, l, b in zip(scores, labels, boxes)]
 
         return results
 
@@ -405,7 +405,7 @@ def build(args):
             aux_weight_dict.update({k + f'_{i}': v for k, v in weight_dict.items()})
         weight_dict.update(aux_weight_dict)
 
-    losses = ['labels', 'boxes', 'cardinality', "relations"]
+    losses = ['obj_labels', 'boxes', 'cardinality', "relations"]
 
     criterion = SetCriterion(num_classes, num_rel_classes, matcher=matcher, weight_dict=weight_dict,
                              eos_coef=args.eos_coef, losses=losses)

@@ -242,8 +242,6 @@ def detectTR(frame):
         oxmax = int(oxmax.item())
         oymax = int(oymax.item())
 
-
-
         subject = CLASSES[probas_sub[idx].argmax()]
         object = CLASSES[probas_obj[idx].argmax()]
         predicate = REL_CLASSES[probas[idx].argmax()]
@@ -368,7 +366,7 @@ def process_video(input_path, output_directory):
             processed_frame = detectTR(frame)
 
             # Write the frame
-            out.write(processed_frame)
+            # out.write(processed_frame)
 
             pbar.update(1)
 
