@@ -22,7 +22,7 @@ def crop(image, target, region):
     # should we do something wrt the original size?
     target["size"] = torch.tensor([h, w])
 
-    fields = ["labels", "area", "iscrowd"]
+    fields = ["obj_labels", "area", "iscrowd"]
 
     if "boxes" in target:
         boxes = target["boxes"]

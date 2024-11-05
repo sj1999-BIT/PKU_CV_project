@@ -112,7 +112,7 @@ class ConvertCocoPolysToMask(object):
 
         target = {}
         target["boxes"] = boxes
-        target["labels"] = classes
+        target["obj_labels"] = classes
         if self.return_masks:
             target["masks"] = masks
         target["image_id"] = image_id

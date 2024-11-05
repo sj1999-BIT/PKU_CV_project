@@ -134,6 +134,8 @@ def main(args):
     probas = outputs['rel_logits'].softmax(-1)[0, :, :-1]
     probas_sub = outputs['sub_logits'].softmax(-1)[0, :, :-1]
     probas_obj = outputs['obj_logits'].softmax(-1)[0, :, :-1]
+
+    # this generates a boolean threshold to determine if this query  is valid
     keep = torch.logical_and(probas.max(-1).values > 0.3, torch.logical_and(probas_sub.max(-1).values > 0.3,
                                                                             probas_obj.max(-1).values > 0.3))
 
@@ -143,7 +145,13 @@ def main(args):
 
     topk = 10
     keep_queries = torch.nonzero(keep, as_tuple=True)[0]
+
+    # confidence scores for relationships, subjects, objects
+    # Multiply all three confidence scores together
+    # -scores means sort in descending order (highest confidence first)
+    # [:topk] takes the top 10 highest confidence predictions
     indices = torch.argsort(-probas[keep_queries].max(-1)[0] * probas_sub[keep_queries].max(-1)[0] * probas_obj[keep_queries].max(-1)[0])[:topk]
+    # From all valid predictions, keep only the top 10 with highest combined confidence
     keep_queries = keep_queries[indices]
 
     # use lists to store the outputs via up-values

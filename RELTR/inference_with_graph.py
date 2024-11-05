@@ -262,11 +262,11 @@ def main(args):
                                   connectionstyle=f'arc3,rad={0.2}', arrows=True)
 
 
-        # Draw edge labels
+        # Draw edge obj_labels
         edge_labels = nx.get_edge_attributes(G, 'label')
         nx.draw_networkx_edge_labels(G, pos, ax=left_ax, edge_labels=edge_labels, font_size=8)
 
-        # Draw node labels
+        # Draw node obj_labels
         nx.draw_networkx_labels(G, pos, ax=left_ax, font_size=6, font_weight='bold')
 
         plt.tight_layout()
