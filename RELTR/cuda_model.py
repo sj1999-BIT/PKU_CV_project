@@ -8,7 +8,7 @@ import torchvision.transforms as T
 
 from PIL import Image
 
-from models import build_model
+from .models import build_model
 
 '''
 python inference_with_video.py --img_path SJ_img/split.jpg --resume ckpt/checkpoint0149.pth

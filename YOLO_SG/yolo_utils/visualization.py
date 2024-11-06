@@ -1,12 +1,17 @@
+import os
+import sys
+import random
+
 import cv2
 
 import seaborn as sns
 import numpy as np
 
+rootpath = os.path.join(os.getcwd(), '..')
+sys.path.append(rootpath)
+
 from matplotlib import pyplot as plt
-
-import constant
-
+from YOLO_SG import constant
 from .label_utils import *
 
 
@@ -138,22 +143,21 @@ def plot_confusion_matrix(tp=0, fp=0, tn=0, fn=0, title='Confusion Matrix', save
         plt.show()
 
 
-def plot_frequency_bar(strings, frequencies, title="Frequency Distribution",
+def plot_frequency_bar(strings, frequencies, output_path="frequency_plot.jpg", title="Frequency Distribution",
                        xlabel="Frequency", ylabel="Items",
                        figsize=(10, 8), rotation=0):
     """
-    Create a horizontal bar graph using matplotlib with random colors for each bar.
-
+    Create and save a horizontal bar graph using matplotlib with random colors for each bar.
     Args:
         strings (list): List of strings for y-axis labels
         frequencies (list): List of corresponding frequencies
+        output_path (str): Path where to save the JPG file
         title (str): Title of the graph
         xlabel (str): Label for x-axis (frequency)
         ylabel (str): Label for y-axis (items)
         figsize (tuple): Figure size (width, height)
         rotation (int): Rotation angle for y-axis labels
     """
-
     # Convert inputs to numpy arrays and ensure proper types
     y = np.arange(len(strings))  # Create numerical y-coordinates
     frequencies = np.array(frequencies, dtype=float)
@@ -191,17 +195,21 @@ def plot_frequency_bar(strings, frequencies, title="Frequency Distribution",
     # Adjust layout to prevent label cutoff
     plt.tight_layout()
 
-    # Show the plot
-    plt.show()
+    # Save the plot as JPG with high DPI for better quality
+    plt.savefig(output_path, format='jpg', dpi=300, bbox_inches='tight')
 
-def data_stat_graph(define_label_dict, abs_data_path):
+    # Close the figure to free memory
+    plt.close(fig)
+
+
+def data_stat_graph(define_label_dict, abs_data_path, output_path="frequency_plot.jpg"):
     """
     given the absolute data path and the corresponding label,
      generate a horizontal bar graph to display distribution of the data.
     """
     strings, frequencies = label_stats(define_label_dict, abs_data_path, have_confident=False)
     strings = [val for i, val in constant.REL_LABEL_DICT.items()]
-    plot_frequency_bar(strings, frequencies)
+    plot_frequency_bar(strings, frequencies, output_path=output_path)
 
 
 if __name__ == "__main__":

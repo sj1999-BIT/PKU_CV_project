@@ -47,7 +47,7 @@ def yolo_training_pipeline(define_label_dict, original_data_path, epochs=300,
 
 if __name__ == '__main__':
     # given the folder containing the original data: images and labels 2 subfolders
-    original_datapath = "./coco_dataset/yolo_5k_data"
+    original_datapath = "./coco_dataset/balanced_balanced_yolo_5k_data"
 
     # model_weight_path = "trained_usable_weights/normal_training_pavement_trial8_300epoch.onnx"
 
@@ -57,9 +57,9 @@ if __name__ == '__main__':
     # # export the model to ONNX format
     # trained_yolo_weights_filepath = yolo_training_pipeline(define_label_dict, original_datapath, img_size=640)
 
-    trained_yolo_weights_filepath = yolo_training_pipeline(constant.REL_LABEL_DICT, original_datapath, img_size=640)
+    # trained_yolo_weights_filepath = yolo_training_pipeline(constant.REL_LABEL_DICT, original_datapath, img_size=640)
 
-    print(f'path is {trained_yolo_weights_filepath}')
+    # print(f'path is {trained_yolo_weights_filepath}')
 
     # define_original_data_path = "./coco_dataset/train_yolo_5k_data/train"
     #
@@ -68,9 +68,11 @@ if __name__ == '__main__':
     # # define the label dictionary for this dataset
     # # define_label_dict = {0: 'crack', 1: 'chipped_off', 2: 'net_crack'}
     #
-    # data_stat_graph(constant.REL_LABEL_DICT, define_original_data_path)
+    # data_stat_graph(constant.REL_LABEL_DICT, original_datapath)
 
-
+    _, label_count = label_stats(constant.REL_LABEL_DICT, original_datapath, have_confident=False)
+    new_path = create_balance_data(original_datapath, label_count, new_data_path=None, min_val=100)
+    data_stat_graph(constant.REL_LABEL_DICT, new_path)
 
 
 
