@@ -1,10 +1,18 @@
+import math
 import os
+import sys
 import shutil
 
 import yaml
 import random
 
 from tqdm import tqdm
+from .label_utils import *
+
+
+rootpath = os.path.join(os.getcwd(), '..')
+sys.path.append(rootpath)
+
 
 
 # only print if code is testing
@@ -327,4 +335,125 @@ def full_yolo_data_prep_pipeline(label_dict, original_data_path, trainable_data_
     # create yaml file for training, return the yaml file path as its needed for training
     yaml_file_path = create_yaml_file(absolute_train_data_path, label_dict, is_log_printing=True)
     return yaml_file_path
+
+
+def create_balance_data(original_data_path, label_count, new_data_path=None, min_val=-1):
+    """
+    Creates a balanced dataset by intelligently sampling from the original dataset.
+    Handles heavily skewed data by using inverse frequency weighting and target quotas.
+
+    Args:
+        original_data_path (str): Path to original YOLO dataset
+        label_count (list): Current count of each label class
+        new_data_path (str, optional): Path for balanced dataset output
+        min_val (int, optional): Target minimum count per class. If -1, uses mean
+
+    The algorithm:
+    1. Sets target quotas for each label based on min_val
+    2. Tracks remaining quota for each label
+    3. Calculates selection probability based on:
+       - How far each label is from its quota
+       - Inverse of current label frequency
+    4. Prioritizes underrepresented labels
+
+    Returns:
+        str: Path to balanced dataset
+    """
+    if new_data_path is None:
+        new_data_path = os.path.join(os.path.dirname(original_data_path),
+                                     f"balanced_{os.path.basename(original_data_path)}")
+
+    if new_data_path is not None and os.path.exists(new_data_path):
+        print(f"cleaning up folder {new_data_path} for new data")
+        clear_folder(new_data_path)
+
+    prepare_data_folder(new_data_path)
+
+    # Set minimum target value
+    if min_val < 0:
+        min_val = int(sum(label_count) / len(label_count))
+
+    # Initialize quota tracking
+    # target_quota = {i: min_val for i in range(len(label_count))}
+    current_count = {i: 0 for i in range(len(label_count))}
+
+    # device a weight, smaller label count, increase weight
+    weight_dict = {}
+    for i in range(len(label_count)):
+        if label_count[i] == 0:
+            continue
+        weight_dict[i] = min_val / label_count[i]
+
+
+    weight_sum = sum(list(weight_dict.values())) / len(weight_dict.keys())
+
+    img_folder = os.path.join(original_data_path, "images")
+    label_folder = os.path.join(original_data_path, "labels")
+    label_files = [f for f in os.listdir(label_folder) if f.endswith('.txt')]
+
+    for label_filename in tqdm(label_files, desc="Balancing dataset"):
+        cur_label_path = os.path.join(label_folder, label_filename)
+        label_list = read_labels_from_file(cur_label_path, have_confident=False)
+
+        # Calculate importance score for this image
+        image_score = 0
+        has_useful_labels = False
+
+        # Count labels in current image
+        label_counts_in_image = {}
+        for label in label_list:
+            cur_index = get_label_index(label)
+            if cur_index not in label_counts_in_image:
+                label_counts_in_image[cur_index] = 0
+            label_counts_in_image[cur_index] += 1
+
+        # Calculate score based on needed labels
+        for label_idx, count in label_counts_in_image.items():
+            if label_count[label_idx] == 0:
+                continue
+
+            image_score += weight_dict[label_idx]
+            # Calculate how far we are from target for this label
+            # remaining_needed = max(0, target_quota[label_idx] - current_count[label_idx])
+            # if remaining_needed > 0:
+                # Score based on how much this label is needed
+            # label_importance = target_quota[label_idx] / label_count[label_idx]
+            # if label_importance > image_score:
+            #     image_score = label_importance
+            # Additional weight for rare labels
+            # rarity_weight = min_val / max(label_count[label_idx], 1)
+            # image_score += label_importance * rarity_weight
+            has_useful_labels = True
+
+        # Normalize score
+        if has_useful_labels:
+            if image_score > random.random():
+                # Copy the files
+                img_filename = label_filename.split(".")[0] + ".jpg"
+                cur_img_path = os.path.join(img_folder, img_filename)
+                new_img_path = os.path.join(new_data_path, "images", img_filename)
+                new_label_path = os.path.join(new_data_path, "labels", label_filename)
+
+                shutil.copy(cur_img_path, new_img_path)
+                shutil.copy(cur_label_path, new_label_path)
+
+                # Update current counts
+                for label_idx, count in label_counts_in_image.items():
+                    current_count[label_idx] += count
+
+    # Print statistics about the balancing
+    print("\nLabel distribution after balancing:")
+    for i in range(len(label_count)):
+        if label_count[i] > 0:  # Only show labels that existed in original dataset
+            print(f"Label {i}: Original: {label_count[i]}, New: {current_count[i]}")
+
+    return new_data_path
+
+
+
+
+
+
+
+
 
