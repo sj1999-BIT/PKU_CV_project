@@ -1,7 +1,10 @@
+import os
 import torch
 
-from .data import *
-
+# only print if code is testing
+def test_log(log_stmt, is_log_printing):
+    if is_log_printing:
+        print(log_stmt)
 
 def read_labels_from_file(file_path, have_confident=True):
     labels = []
@@ -45,7 +48,11 @@ def label_stats(label_dict, data_folder_path, have_confident=True):
 
     label_count = [0 for i in label_dict]
     background = 0
-    label_files = get_all_label_filename(data_folder_path)
+    label_folder = os.path.join(data_folder_path, "labels")
+
+    # get all the labels from both files
+    label_files = [f for f in os.listdir(label_folder) if f.endswith('.txt')]
+
     for label_file in label_files:
         if label_file == "labels.txt":
             # there is a labels.txt file which do not contain labels
