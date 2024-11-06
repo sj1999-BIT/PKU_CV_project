@@ -1,8 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 # Copyright (c) Institute of Information Processing, Leibniz University Hannover.
 
+import os
+import sys
 import torch
 import torch.nn.functional as F
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from torch import nn
 from util import box_ops
 from util.misc import (NestedTensor, nested_tensor_from_tensor_list,
@@ -11,6 +16,8 @@ from util.misc import (NestedTensor, nested_tensor_from_tensor_list,
 from .backbone import build_backbone
 from .matcher import build_matcher
 from .transformer import build_transformer
+
+
 
 class RelTR(nn.Module):
     """ RelTR: Relation Transformer for Scene Graph Generation """
