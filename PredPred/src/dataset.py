@@ -1,7 +1,10 @@
 import json
 import logging
-import random
 import torch
+from torch.utils import data
+import argparse
+from glove import Glove
+import sys
 
 
 class Bounds:
@@ -56,81 +59,26 @@ class Bounds:
 
 
 class DataSet:
-    def __init__(self, glove, rels_json_file_path, split):
-        logging.info(f"Reading the dataset at '{rels_json_file_path}'")
-        self.file_path = rels_json_file_path
-        f = open(rels_json_file_path, "r")
-        js = json.load(f)
+    def __init__(self, file_path, split):
+        logging.info(f"Reading the dataset at '{file_path}'")
+        self.xs, self.ys = torch.load(file_path)
+        self.pred_count = int(self.ys.max()+1)
 
-        self.train = []
-        self.validate = []
-        self.test = []
-        self.pred_count = 0
-        self.pred_ids = {}
-
-        skipped = 0
-        image_count = len(js)
-        for i, pic in enumerate(js):
-            for obj in pic["relationships"]:
-                has_1 = glove.has(obj["object"]["name"])
-                has_2 = glove.has(obj["subject"]["name"])
-                if not has_1 or not has_2:
-                    skipped += 1
-                    continue
-
-                (x, y) = self.parse_relationship(obj, glove)
-
-                to_set = random.random()
-                if to_set < split / 100:
-                    self.test.append((x, y))
-                elif to_set < 2 * split / 100:
-                    self.validate.append((x, y))
-                else:
-                    self.train.append((x, y))
-
-            if (i % 2000 == 0):
-                logging.info(f"Read {i+1}/{image_count} images")
-
-        f.close()
-
-        logging.info("Finished reading the dataset")
-        logging.info(f"Predicate count: {self.pred_count}")
-        logging.info(f"Test set: {len(self.test)} rels")
-        logging.info(f"Validation set: {len(self.validate)} rels")
-        logging.info(f"Train set: {len(self.train)} rels")
-        logging.info(f"Predicate count: {self.pred_count}")
-        logging.info(f"Skipped due to not being in Glove: {skipped}")
-
-    def parse_relationship(self, obj, glove):
-        obj_bounds = Bounds.from_corner_size(
-            obj["object"]["x"],
-            obj["object"]["y"],
-            obj["object"]["w"],
-            obj["object"]["h"],
+        frac = split * 1.0 / 100.0
+        self.train, self.test, self.validate = data.random_split(
+            self,
+            [1.0 - frac * 2.0, frac, frac]
         )
-        subj_bounds = Bounds.from_corner_size(
-            obj["subject"]["x"],
-            obj["subject"]["y"],
-            obj["subject"]["w"],
-            obj["subject"]["h"],
-        )
-        o, s = obj_bounds.normalize(subj_bounds)
+        logging.info(f"Predicate count: {self.pred_count}")
+        logging.info(f"Size of training set: {len(self.train)}")
+        logging.info(f"Size of validation set: {len(self.validate)}")
+        logging.info(f"Size of test set: {len(self.test)}")
 
-        obj_vec = glove.get(obj["object"]["name"])
-        subj_vec = glove.get(obj["object"]["name"])
-        x = torch.concat((
-            obj_vec,
-            torch.tensor([o.x1, o.y1, o.size()[0], o.size()[1]]),
-            subj_vec,
-            torch.tensor([s.x1, s.y1, s.size()[0], s.size()[1]])
-        ))
+    def __getitem__(self, idx):
+        return (self.xs[idx], self.ys[idx])
 
-        if obj["predicate"] not in self.pred_ids:
-            self.pred_ids[obj["predicate"]] = self.pred_count
-            self.pred_count += 1
-        y = self.pred_ids[obj["predicate"]]
-
-        return x, y
+    def __len__(self):
+        return len(self.xs)
 
     def train_set(self):
         return SubSet(self.train)
@@ -140,6 +88,131 @@ class DataSet:
 
     def validation_set(self):
         return SubSet(self.validate)
+
+
+class SubSet:
+    def __init__(self, subset):
+        self.subset = subset
+
+    def __len__(self):
+        return len(self.subset)
+
+    def __getitem__(self, idx):
+        return self.subset[idx]
+
+
+def parse_relationship(obj, glove, pred_ids, pred_count):
+    obj_bounds = Bounds.from_corner_size(
+        obj["object"]["x"],
+        obj["object"]["y"],
+        obj["object"]["w"],
+        obj["object"]["h"],
+    )
+    subj_bounds = Bounds.from_corner_size(
+        obj["subject"]["x"],
+        obj["subject"]["y"],
+        obj["subject"]["w"],
+        obj["subject"]["h"],
+    )
+    o, s = obj_bounds.normalize(subj_bounds)
+
+    obj_vec = glove.get(obj["object"]["name"])
+    subj_vec = glove.get(obj["object"]["name"])
+    x = torch.concat((
+        obj_vec,
+        torch.tensor([o.x1, o.y1, o.size()[0], o.size()[1]],
+                     dtype=torch.float),
+        subj_vec,
+        torch.tensor([s.x1, s.y1, s.size()[0], s.size()[1]],
+                     dtype=torch.float),
+    ))
+
+    if obj["predicate"] not in pred_ids:
+        pred_ids[obj["predicate"]] = pred_count
+        pred_count += 1
+    y = pred_ids[obj["predicate"]]
+
+    return x, y, pred_count
+
+
+def process_dataset(glove, json_path, res_path):
+    logging.info(f"Processing dataset '{json_path}'")
+    pred_count = 0
+    pred_ids = {}
+
+    f = open(json_path, "r")
+    js = json.load(f)
+    skipped = 0
+    image_count = len(js)
+    objs = []
+    for i, pic in enumerate(js):
+        for obj in pic["relationships"]:
+            has_1 = glove.has(obj["object"]["name"])
+            has_2 = glove.has(obj["subject"]["name"])
+            has_3 = glove.has(obj["predicate"])
+            if not has_1 or not has_2 or not has_3:
+                skipped += 1
+                continue
+
+            (x, y, next_pred_count) = parse_relationship(
+                obj, glove, pred_ids, pred_count
+            )
+            pred_count = next_pred_count
+            objs.append((x, y))
+
+        if (i % 2000 == 0):
+            logging.info(f"Read {i+1}/{image_count} images")
+
+    f.close()
+
+    logging.info("Finished reading the dataset")
+    logging.info(f"Predicate count: {pred_count}")
+    logging.info(f"Triple count: {len(objs)}")
+    logging.info(f"Skipped due to not being in Glove: {skipped}")
+
+    xs = torch.zeros((len(objs), len(objs[0][0])))
+    ys = torch.zeros(len(objs), dtype=torch.int64)
+
+    for i, (x, y) in enumerate(objs):
+        xs[i] = x
+        ys[i] = y
+        if i % 20000 == 0:
+            logging.info(f"Postprocessing: {i+1}/{len(objs)}")
+
+    logging.info("Saving the processed dataset")
+    torch.save([xs, ys], res_path)
+    logging.info(f"Saved dataset as '{res_path}'")
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--input",
+    help="Path to raw dataset relationships.json",
+    required=True
+)
+parser.add_argument(
+    "--output",
+    help="Path to new processed dataset",
+    required=True
+)
+parser.add_argument(
+    "--glove",
+    help="File path to glove.6B.50d.txt",
+    required=True,
+)
+parser.add_argument(
+    "--log",
+    help="Log level",
+    default="INFO"
+)
+
+if __name__ == '__main__':
+    args = parser.parse_args(sys.argv[1:])
+    logging.basicConfig(level=logging._nameToLevel[args.log])
+    logging.info("Processing the raw dataset")
+    glove = Glove(args.glove)
+    process_dataset(glove, args.input, args.output)
+
 
 # {
 #     'predicate': 'with',
@@ -164,14 +237,3 @@ class DataSet:
 #         'x': 1,
 #     }
 # }
-
-
-class SubSet:
-    def __init__(self, subset):
-        self.subset = subset
-
-    def __len__(self):
-        return len(self.subset)
-
-    def __getitem__(self, idx):
-        return self.subset[idx]

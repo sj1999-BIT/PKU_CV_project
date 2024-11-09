@@ -1,5 +1,4 @@
 from dataset import DataSet
-from glove import Glove
 import logging
 import argparse
 import sys
@@ -7,7 +6,6 @@ import model
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(
     prog="PredPred",
@@ -50,9 +48,16 @@ parser.add_argument(
     default="./models",
 )
 parser.add_argument(
-    "--glove",
-    help="File path to glove.6B.50d.txt",
-    required=True,
+    "--layer_1",
+    help="Dimenision of layer 1",
+    default=1000,
+    type=int,
+)
+parser.add_argument(
+    "--layer_2",
+    help="Dimenision of layer 2",
+    default=1000,
+    type=int,
 )
 
 
@@ -60,8 +65,7 @@ class Trainer:
     def __init__(self, args):
         self.args = args
 
-        self.glove = Glove(args.glove)
-        self.ds = DataSet(self.glove, args.input, args.split)
+        self.ds = DataSet(args.input, args.split)
         self.train_set = DataLoader(
             self.ds.train_set(),
             batch_size=args.batch_size
@@ -77,7 +81,9 @@ class Trainer:
 
         logging.info("Reading the dataset done")
         logging.info(f"Creating the model on device '{args.device}'")
-        self.m = model.Model(108, self.ds.pred_count).to(args.device)
+        self.m = model.Model(
+            108, self.ds.pred_count, self.args.layer_1, self.args.layer_2
+        ).to(args.device)
         logging.info("Creating the model done")
 
         self.loss_fn = nn.CrossEntropyLoss()
@@ -87,32 +93,8 @@ class Trainer:
         )
 
         self.train_loss = []
-        self.train_loss_x = []
         self.validation_loss = []
-        self.validation_loss_x = []
-
-    def plot_loss(self):
-        fig = plt.figure(figsize=(20, 10))
-        self.ax_loss = fig.add_subplot(111)
-        self.ax_loss.set_xlabel("Epochs")
-        self.ax_loss.set_ylabel("Loss")
-        self.ax_loss.set_title("Loss over time")
-        self.ax_loss.set_xlim(0, self.args.epoch_count)
-        self.ax_loss.set_ylim(0, 20)
-        self.ax_loss.plot(
-            self.train_loss_x,
-            self.train_loss,
-            label="Train loss",
-            color="blue",
-        )
-        self.ax_loss.plot(
-            self.validation_loss_x,
-            self.validation_loss,
-            label="Validation loss",
-            color="red",
-        )
-        plt.legend()
-        plt.show()
+        self.validation_accuracy = []
 
     def train(self):
         for i in range(0, self.args.epoch_count):
@@ -128,32 +110,38 @@ class Trainer:
         logging.info(f"Validation for epoch {epoch_idx}")
         self.m.eval()
         total_loss = 0.0
+        correct = 0
 
         with torch.no_grad():
-            for (x, y) in self.validation_set:
+            for (x, i) in self.validation_set:
                 x = x.to(self.args.device)
                 y = torch.zeros(len(x), self.ds.pred_count).\
-                    scatter_(1, y.unsqueeze(1), 1).\
+                    scatter_(1, i.unsqueeze(1), 1).\
                     to(self.args.device)
                 pred = self.m(x)
+                if pred.argmax(1) == i:
+                    correct += 1
                 total_loss += self.loss_fn(pred, y).item()
 
         avg_loss = total_loss / len(self.validation_set)
-        logging.info(f"Average loss: {avg_loss}")
+        accuracy = correct / len(self.validation_set.dataset)
+        logging.info(f"Loss: {avg_loss}")
+        logging.info(f"Accuracy: {accuracy}")
         self.validation_loss.append(avg_loss)
-        self.validation_loss_x.append(epoch_idx)
+        self.validation_accuracy.append(accuracy)
 
         logging.info(f"Validation done for epoch {epoch_idx}")
 
     def train_epoch(self, epoch_idx):
+        assert torch.is_grad_enabled()
         logging.info(f"Training epoch {epoch_idx}")
         self.m.train()
         size = len(self.train_set)
 
-        for batch, (x, y) in enumerate(self.train_set):
+        for batch, (x, i) in enumerate(self.train_set):
             x = x.to(self.args.device)
             y = torch.zeros(len(x), self.ds.pred_count).\
-                scatter_(1, y.unsqueeze(1), 1).\
+                scatter_(1, i.unsqueeze(1), 1).\
                 to(self.args.device)
             pred = self.m(x)
             loss = self.loss_fn(pred, y)
@@ -162,11 +150,10 @@ class Trainer:
             self.optimizer.step()
             self.optimizer.zero_grad()
 
-            if batch % 50 == 0:
+            if batch % 1000 == 0:
                 loss_amt = loss.item()
-                logging.info(f"[{batch}/{size}] loss  = {loss_amt}")
+                logging.info(f"[{batch}/{size}] Loss: {loss_amt}")
                 self.train_loss.append(loss_amt)
-                self.train_loss_x.append(epoch_idx + batch * len(x) / size)
 
         logging.info(f"Finished training epoch {epoch_idx}")
 
@@ -179,4 +166,3 @@ if __name__ == "__main__":
     t = Trainer(args)
     t.train()
     logging.info("Finished")
-    t.plot_loss()

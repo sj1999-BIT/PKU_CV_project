@@ -3,7 +3,7 @@ from torch import nn
 
 
 class Model(nn.Module):
-    def __init__(self, input_dim, output_dim, layer_1=500, layer_2=500):
+    def __init__(self, input_dim, output_dim, layer_1, layer_2):
         super().__init__()
 
         self.network = nn.Sequential(
