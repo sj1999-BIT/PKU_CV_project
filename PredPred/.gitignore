@@ -1,2 +1,4 @@
 relationships.json
 __pycache__/
+models/
+glove.6B.50d.txt
