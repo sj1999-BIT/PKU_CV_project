@@ -39,7 +39,7 @@ class Metrics:
                 self.train_loss,
                 self.validation_loss,
                 self.train_cm,
-                self.validate_cm,
+                self.validation_cm,
             ],
             f"{self.metrics_dir}/metrics_{epoch}.dat",
         )

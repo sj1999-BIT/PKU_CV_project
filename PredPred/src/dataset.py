@@ -61,9 +61,9 @@ class Bounds:
 class DataSet:
     def __init__(self, file_path, split, seed):
         logging.info(f"Reading the dataset at '{file_path}'")
-        self.xs, self.ys = torch.load(file_path)
-        self.xs = self.xs[:1000]
-        self.ys = self.ys[:1000]
+        self.xs, self.ys = torch.load(file_path, weights_only=True)
+        self.xs = self.xs
+        self.ys = self.ys
         self.pred_count = int(self.ys.max()+1)
 
         frac = split * 1.0 / 100.0
