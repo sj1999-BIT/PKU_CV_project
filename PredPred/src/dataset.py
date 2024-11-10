@@ -125,11 +125,9 @@ def parse_relationship(obj, glove, pred_ids, id_to_pred):
     obj_vec = glove.get(obj["object"]["name"])
     subj_vec = glove.get(obj["object"]["name"])
     x = torch.concat((
-        torch.tensor([float(obj["object"]["object_id"])]),
         obj_vec,
         torch.tensor([o.x1, o.y1, o.size()[0], o.size()[1]],
                      dtype=torch.float),
-        torch.tensor([float(obj["subject"]["object_id"])]),
         subj_vec,
         torch.tensor([s.x1, s.y1, s.size()[0], s.size()[1]],
                      dtype=torch.float),
