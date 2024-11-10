@@ -52,7 +52,7 @@ class Runner:
         self.args = args
         self.glove = Glove(args.glove)
         self.ds = DataSet(args.dataset, 10, 0)
-        self.m = Model(108, args.layer_1, args.layer_2,
+        self.m = Model(110, args.layer_1, args.layer_2,
                        args.layer_3, self.ds.pred_count)
         self.m.load_state_dict(torch.load(
             args.model, weights_only=True, map_location=args.device))
@@ -66,6 +66,7 @@ class Runner:
             torch.tensor([o.x1, o.y1, o.size()[0], o.size()[1]]),
             self.glove.get(subj_name),
             torch.tensor([s.x1, o.y1, s.size()[0], s.size()[1]]),
+            torch.tensor([s.x1 - o.x1, s.y1 - o.y1]),
         )).to(self.args.device)
         vec = vec.reshape((1, len(vec)))
         with torch.no_grad():

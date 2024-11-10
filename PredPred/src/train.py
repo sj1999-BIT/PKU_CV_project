@@ -107,7 +107,7 @@ class Trainer:
         logging.info("Reading the dataset done")
         logging.info(f"Creating the model on device '{args.device}'")
         self.m = model.Model(
-            108,
+            110,
             self.args.layer_1, self.args.layer_2, self.args.layer_3,
             self.ds.pred_count,
         ).to(args.device)
