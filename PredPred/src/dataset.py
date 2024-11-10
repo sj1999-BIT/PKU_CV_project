@@ -108,12 +108,22 @@ class SubSet:
 
 
 class ProcessDataset:
-    def __init__(self, path, glove, top_preds_count):
+    def __init__(self, path, glove, allowed_preds):
         self.glove = glove
         logging.info(f"Processing dataset '{path}'")
         self.pred_ids = {}
         self.id_to_pred = []
-        self.pred_used_count = []
+
+        f = open(allowed_preds, "r")
+        for line in f:
+            x = line.split(': ')
+            main_pred = x[0].strip()
+            self.pred_ids[main_pred] = len(self.id_to_pred)
+            if len(x) > 1:
+                for same_pred in x[1].split(', '):
+                    self.pred_ids[same_pred] = len(self.id_to_pred)
+            self.id_to_pred.append(main_pred)
+        f.close()
 
         f = open(path, "r")
         js = json.load(f)
@@ -122,9 +132,10 @@ class ProcessDataset:
         objs = []
         for i, pic in enumerate(js):
             for obj in pic["relationships"]:
-                has_1 = glove.has(obj["object"]["name"])
-                has_2 = glove.has(obj["subject"]["name"])
-                if not has_1 or not has_2:
+                ok_1 = glove.has(obj["object"]["name"])
+                ok_2 = glove.has(obj["subject"]["name"])
+                ok_3 = obj["predicate"] in self.pred_ids
+                if not ok_1 or not ok_2 or not ok_3:
                     skipped += 1
                     continue
 
@@ -139,30 +150,14 @@ class ProcessDataset:
         self.pred_count = len(self.id_to_pred)
         logging.info("Finished reading the dataset")
         logging.info(f"Predicate count: {self.pred_count}")
-        logging.info(f"Skipped due to not being in Glove: {skipped}")
-        top, top_ids = torch.topk(torch.tensor(
-            self.pred_used_count), top_preds_count)
-        size = top.sum()
-        logging.info(f"Top {top_preds_count} predicates account for {
-            size / len(objs) * 100.0}% of triples")
+        logging.info(f"Skipped: {skipped * 100 / (len(objs)+skipped)}%")
+        logging.info(f"Triple count: {len(objs)}")
 
-        self.xs = torch.zeros((size, len(objs[0][0])))
-        self.ys = torch.zeros(size)
-        id_to_pred = [self.id_to_pred[i] for i in top_ids]
-        pred_ids = {}
-        for i, w in enumerate(id_to_pred):
-            pred_ids[w] = i
-
-        k = 0
-        for i in range(len(objs)):
-            if objs[i][1] in top_ids:
-                self.xs[k] = objs[i][0]
-                self.ys[k] = pred_ids[self.id_to_pred[objs[i][1]]]
-                k += 1
-
-        self.id_to_pred = id_to_pred
-        self.pred_ids = pred_ids
-        logging.info(f"Triple count: {len(self.xs)}")
+        self.xs = torch.zeros((len(objs), len(objs[0][0])), dtype=torch.float)
+        self.ys = torch.zeros(len(objs), dtype=torch.int64)
+        for i, (x, y) in enumerate(objs):
+            self.xs[i] = x
+            self.ys[i] = y
 
     def parse_relationship(self, obj):
         obj_bounds = Bounds.from_corner_size(
@@ -191,13 +186,7 @@ class ProcessDataset:
             torch.tensor([s.x1 - o.x1, s.y1 - o.y1]),
         ))
 
-        if obj["predicate"] not in self.pred_ids:
-            pred_count = len(self.id_to_pred)
-            self.pred_ids[obj["predicate"]] = pred_count
-            self.id_to_pred.append(obj["predicate"])
-            self.pred_used_count.append(0)
         y = self.pred_ids[obj["predicate"]]
-        self.pred_used_count[y] += 1
 
         return x, y
 
@@ -227,10 +216,9 @@ parser.add_argument(
     default="INFO"
 )
 parser.add_argument(
-    "--top_preds",
-    help="Keep only top <top_preds> predicates",
-    default=30,
-    type=int,
+    "--allowed_preds",
+    help="File with a list of allowed predicates",
+    required=True,
 )
 
 if __name__ == '__main__':
@@ -238,7 +226,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging._nameToLevel[args.log])
     logging.info("Processing the raw dataset")
     glove = Glove(args.glove)
-    ds = ProcessDataset(args.input, glove, args.top_preds)
+    ds = ProcessDataset(args.input, glove, args.allowed_preds)
     ds.save(args.output)
 
 
