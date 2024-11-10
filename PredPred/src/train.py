@@ -6,6 +6,8 @@ import model
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+import os
+from metrics import Metrics
 
 parser = argparse.ArgumentParser(
     prog="PredPred",
@@ -59,13 +61,24 @@ parser.add_argument(
     default=1000,
     type=int,
 )
+parser.add_argument(
+    "--seed",
+    help="Random seed for splitting the dataset",
+    default=0,
+    type=int,
+)
+parser.add_argument(
+    "--metrics_dir",
+    help="Directory for saving the metrics",
+    default="metrics",
+)
 
 
 class Trainer:
     def __init__(self, args):
         self.args = args
 
-        self.ds = DataSet(args.input, args.split)
+        self.ds = DataSet(args.input, args.split, args.seed)
         self.train_set = DataLoader(
             self.ds.train_set(),
             batch_size=args.batch_size
@@ -92,19 +105,22 @@ class Trainer:
             lr=args.learning_rate
         )
 
-        self.train_loss = []
-        self.validation_loss = []
-        self.validation_accuracy = []
+        self.metrics = Metrics(self.args.metrics_dir, self.ds.pred_count)
+
+        if not os.path.exists(self.args.model_dir):
+            os.mkdir(self.args.model_dir)
 
     def train(self):
         for i in range(0, self.args.epoch_count):
             logging.info(f"Staring epoch {i}")
             self.train_epoch(i)
+            self.validate_epoch(i)
+
             model_name = f"{self.args.model_dir}/model_{i}.pth"
             logging.info(f"Saving model as '{model_name}'")
             torch.save(self.m.state_dict(), model_name)
             logging.info("Model saved")
-            self.validate_epoch(i)
+            self.metrics.end_epoch(i)
 
     def validate_epoch(self, epoch_idx):
         logging.info(f"Validation for epoch {epoch_idx}")
@@ -119,9 +135,12 @@ class Trainer:
                     scatter_(1, i.unsqueeze(1), 1).\
                     to(self.args.device)
                 pred = self.m(x)
-                if pred.argmax(1) == i:
-                    correct += 1
-                total_loss += self.loss_fn(pred, y).item()
+                pred_ids = pred.argmax(1).to("cpu")
+                correct += pred_ids.eq(i.to("cpu")).sum().item()
+                loss_amt = self.loss_fn(pred, y).item()
+                total_loss += loss_amt
+
+                self.metrics.validation_batch(pred_ids, i, loss_amt)
 
         avg_loss = total_loss / len(self.validation_set)
         accuracy = correct / len(self.validation_set.dataset)
@@ -137,6 +156,10 @@ class Trainer:
         logging.info(f"Training epoch {epoch_idx}")
         self.m.train()
         size = len(self.train_set)
+        correct = 0
+        total = 0
+        batches = 0
+        total_grad_norm = 0.0
 
         for batch, (x, i) in enumerate(self.train_set):
             x = x.to(self.args.device)
@@ -144,23 +167,45 @@ class Trainer:
                 scatter_(1, i.unsqueeze(1), 1).\
                 to(self.args.device)
             pred = self.m(x)
+            pred_ids = pred.argmax(1).to("cpu")
+            correct += pred_ids.eql(i).sum().item()
+            total += len(x)
             loss = self.loss_fn(pred, y)
 
             loss.backward()
             self.optimizer.step()
             self.optimizer.zero_grad()
+            loss_amt = loss.item()
+
+            grad_norm = self.grad_norm()
+            total_grad_norm += grad_norm
+            self.metrics.training_batch(pred_ids, i, loss_amt, grad_norm)
 
             if batch % 1000 == 0:
-                loss_amt = loss.item()
-                logging.info(f"[{batch}/{size}] Loss: {loss_amt}")
-                self.train_loss.append(loss_amt)
+                logging.info(f"Batch {batch}/{size}:")
+                logging.info(f"=======> AvgLoss: {loss_amt / batches}")
+                logging.info(f"=======> Accuracy: {correct / total}")
+                logging.info(f"=======> AvgGrad: {total_grad_norm / batches}")
 
         logging.info(f"Finished training epoch {epoch_idx}")
+
+        def grad_norm(self):
+            total = 0.0
+            for p in self.m.parameters():
+                if p.grad is not None:
+                    total += p.grad.data.norm(2).item() ** 2
+            return total ** 0.5
 
 
 if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
-    logging.basicConfig(level=logging._nameToLevel[args.log])
+    logging.basicConfig(
+        level=logging._nameToLevel[args.log],
+        filename="out.log",
+        format="[{levelname}] {asctime}: {message}",
+        style="{",
+        datefmt="%Y-%m-%d %H:%M",
+    )
     logging.info(f"Args: {args}")
     logging.info("Started")
     t = Trainer(args)
