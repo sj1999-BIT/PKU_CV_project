@@ -59,15 +59,18 @@ class Bounds:
 
 
 class DataSet:
-    def __init__(self, file_path, split):
+    def __init__(self, file_path, split, seed):
         logging.info(f"Reading the dataset at '{file_path}'")
         self.xs, self.ys = torch.load(file_path)
+        self.xs = self.xs[:1000]
+        self.ys = self.ys[:1000]
         self.pred_count = int(self.ys.max()+1)
 
         frac = split * 1.0 / 100.0
         self.train, self.test, self.validate = data.random_split(
             self,
-            [1.0 - frac * 2.0, frac, frac]
+            [1.0 - frac * 2.0, frac, frac],
+            torch.Generator().manual_seed(seed),
         )
         logging.info(f"Predicate count: {self.pred_count}")
         logging.info(f"Size of training set: {len(self.train)}")
