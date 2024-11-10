@@ -61,9 +61,9 @@ class Bounds:
 class DataSet:
     def __init__(self, file_path, split, seed):
         logging.info(f"Reading the dataset at '{file_path}'")
-        self.xs, self.ys = torch.load(file_path, weights_only=True)
-        self.xs = self.xs
-        self.ys = self.ys
+        self.xs, self.ys, self.id_to_pred = torch.load(
+            file_path, weights_only=True
+        )
         self.pred_count = int(self.ys.max()+1)
 
         frac = split * 1.0 / 100.0
@@ -82,6 +82,9 @@ class DataSet:
 
     def __len__(self):
         return len(self.xs)
+
+    def get_predicate(self, idx):
+        return self.id_to_pred[idx]
 
     def train_set(self):
         return SubSet(self.train)
@@ -104,7 +107,7 @@ class SubSet:
         return self.subset[idx]
 
 
-def parse_relationship(obj, glove, pred_ids, pred_count):
+def parse_relationship(obj, glove, pred_ids, id_to_pred):
     obj_bounds = Bounds.from_corner_size(
         obj["object"]["x"],
         obj["object"]["y"],
@@ -122,26 +125,30 @@ def parse_relationship(obj, glove, pred_ids, pred_count):
     obj_vec = glove.get(obj["object"]["name"])
     subj_vec = glove.get(obj["object"]["name"])
     x = torch.concat((
+        torch.tensor([float(obj["object"]["object_id"])]),
         obj_vec,
         torch.tensor([o.x1, o.y1, o.size()[0], o.size()[1]],
                      dtype=torch.float),
+        torch.tensor([float(obj["subject"]["object_id"])]),
         subj_vec,
         torch.tensor([s.x1, s.y1, s.size()[0], s.size()[1]],
                      dtype=torch.float),
+        torch.tensor([s.x1 - o.x1, s.y1 - o.y1]),
     ))
 
     if obj["predicate"] not in pred_ids:
+        pred_count = len(id_to_pred)
         pred_ids[obj["predicate"]] = pred_count
-        pred_count += 1
+        id_to_pred.append(obj["predicate"])
     y = pred_ids[obj["predicate"]]
 
-    return x, y, pred_count
+    return x, y
 
 
 def process_dataset(glove, json_path, res_path):
     logging.info(f"Processing dataset '{json_path}'")
-    pred_count = 0
     pred_ids = {}
+    id_to_pred = []
 
     f = open(json_path, "r")
     js = json.load(f)
@@ -157,10 +164,9 @@ def process_dataset(glove, json_path, res_path):
                 skipped += 1
                 continue
 
-            (x, y, next_pred_count) = parse_relationship(
-                obj, glove, pred_ids, pred_count
+            (x, y) = parse_relationship(
+                obj, glove, pred_ids, id_to_pred,
             )
-            pred_count = next_pred_count
             objs.append((x, y))
 
         if (i % 2000 == 0):
@@ -168,6 +174,7 @@ def process_dataset(glove, json_path, res_path):
 
     f.close()
 
+    pred_count = len(id_to_pred)
     logging.info("Finished reading the dataset")
     logging.info(f"Predicate count: {pred_count}")
     logging.info(f"Triple count: {len(objs)}")
@@ -179,11 +186,9 @@ def process_dataset(glove, json_path, res_path):
     for i, (x, y) in enumerate(objs):
         xs[i] = x
         ys[i] = y
-        if i % 20000 == 0:
-            logging.info(f"Postprocessing: {i+1}/{len(objs)}")
 
     logging.info("Saving the processed dataset")
-    torch.save([xs, ys], res_path)
+    torch.save([xs, ys, id_to_pred], res_path)
     logging.info(f"Saved dataset as '{res_path}'")
 
 
