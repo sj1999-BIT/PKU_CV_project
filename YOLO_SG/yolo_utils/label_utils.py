@@ -222,3 +222,4 @@ def calculate_iou(box1, box2, is_only_extension=False, is_original=False):
         two_overlap = inter_area / float(box2_area)
 
     return max(one_overlap, two_overlap)
+
