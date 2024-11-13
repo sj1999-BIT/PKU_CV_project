@@ -3,6 +3,8 @@ import os.path
 from yolo_utils import *
 from ultralytics import YOLO
 
+import constant
+
 
 def yolo_model_testing(trained_weights_file_path, testing_img_folder_path, imgSize=640, conf=0.15):
     """
@@ -386,8 +388,8 @@ if __name__ == '__main__':
 
     # first find the path to the file
     # trained_weights_file_path = "trained_usable_weights/Trial8_D2_PavementImages_ColourCorrected_imgsize_1088_epoch_300/weights/best.pt"
-    trained_weights_file_path = "D:\Shui Jie\PHD school\Computational Vision\PKU_CV_project\YOLO_SG\weights\yolo_5K_80_epoch.pt"
-
+    # trained_weights_file_path = "D:\Shui Jie\PHD school\Computational Vision\PKU_CV_project\YOLO_SG\weights\yolo_5K_80_epoch.pt"
+    trained_weights_file_path = "D:\Shui Jie\PHD school\Computational Vision\PKU_CV_project\YOLO_SG\weights\yolo_concised_25K_300_epoch.pt"
 
 
     # use the allocated testing data

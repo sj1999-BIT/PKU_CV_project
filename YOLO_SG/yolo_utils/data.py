@@ -449,7 +449,86 @@ def create_balance_data(original_data_path, label_count, new_data_path=None, min
 
     return new_data_path
 
+def forced_removal_new_data(original_data_path, label_count, new_data_path=None, max_val=-1):
+    """
+    Idea: forcefully remove labels that are above threshold amount to get more evenly spread model.
+    """
+    # Set max count value to keep the label as average if not given
+    if max_val < 0:
+        max_val = int(sum(label_count) / len(label_count))
 
+    # prepare the output data folder
+    if new_data_path is None:
+        new_data_path = os.path.join(os.path.dirname(original_data_path),
+                                     f"balanced_{os.path.basename(original_data_path)}")
+
+    if new_data_path is not None and os.path.exists(new_data_path):
+        print(f"cleaning up folder {new_data_path} for new data")
+        clear_folder(new_data_path)
+
+    prepare_data_folder(new_data_path)
+
+    # device a list to decide if we keep the label
+    keep = [(label_count[i] <= max_val) for i in range(len(label_count))]
+
+    # target src folder
+    img_folder = os.path.join(original_data_path, "images")
+    label_folder = os.path.join(original_data_path, "labels")
+
+    # get all label files
+    label_files = [f for f in os.listdir(label_folder) if f.endswith('.txt')]
+
+    # count the new data number
+    count = 0
+
+    # count the new data label
+    current_count = {i: 0 for i in range(len(label_count))}
+
+    # for each label file we decide if we keeping it
+    for label_filename in tqdm(label_files, desc="Balancing dataset"):
+        cur_label_path = os.path.join(label_folder, label_filename)
+        label_list = read_labels_from_file(cur_label_path, have_confident=False)
+
+        # we only collect labels we deem necessary
+        new_label_list = []
+        for label in label_list:
+            cur_index = get_label_index(label)
+            # skip unwanted label
+            if not keep[cur_index]:
+                continue
+            # keep the label
+            new_label_list.append(label)
+
+        # ignore files with no label we need
+        if len(new_label_list) == 0:
+            continue
+
+        # new data transferred
+        count += 1
+
+        # Copy the files
+        img_filename = label_filename.split(".")[0] + ".jpg"
+        cur_img_path = os.path.join(img_folder, img_filename)
+        new_img_path = os.path.join(new_data_path, "images", img_filename)
+        new_label_path = os.path.join(new_data_path, "labels", label_filename)
+
+        shutil.copy(cur_img_path, new_img_path)
+
+        with open(new_label_path, 'w') as f:
+            for label in new_label_list:
+                current_count[label[0]] += 1
+                if label_count[label[0]] > 100:
+                    print("WTF")
+                f.write(f"{int(label[0])} {label[1]} {label[2]} {label[3]} {label[4]}\n")
+
+    print(f"new data count: {count} at {new_data_path}")
+    # Print statistics about the balancing
+    print("\nLabel distribution after balancing:")
+    for i in range(len(label_count)):
+        if label_count[i] > 0:  # Only show labels that existed in original dataset
+            print(f"Label {i}: Original: {label_count[i]}, New: {current_count[i]}")
+
+    return new_data_path
 
 
 

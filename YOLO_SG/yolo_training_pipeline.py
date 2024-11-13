@@ -1,5 +1,6 @@
 from ultralytics import YOLO
 
+import constant
 from yolo_utils import *
 
 
@@ -47,7 +48,7 @@ def yolo_training_pipeline(define_label_dict, original_data_path, epochs=300,
 
 if __name__ == '__main__':
     # given the folder containing the original data: images and labels 2 subfolders
-    original_datapath = "./coco_dataset/balanced_balanced_yolo_5k_data"
+    original_datapath = "./coco_dataset/yolo_5k_data"
 
     # model_weight_path = "trained_usable_weights/normal_training_pavement_trial8_300epoch.onnx"
 
@@ -71,8 +72,10 @@ if __name__ == '__main__':
     # data_stat_graph(constant.REL_LABEL_DICT, original_datapath)
 
     _, label_count = label_stats(constant.REL_LABEL_DICT, original_datapath, have_confident=False)
-    new_path = create_balance_data(original_datapath, label_count, new_data_path=None, min_val=100)
-    data_stat_graph(constant.REL_LABEL_DICT, new_path)
+    # new_path = create_balance_data(original_datapath, label_count, new_data_path=None, min_val=100)
+
+    # new_path = forced_removal_new_data(original_datapath, label_count, max_val=100)
+    data_stat_graph(constant.REL_LABEL_DICT, original_datapath)
 
 
 
