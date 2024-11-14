@@ -16,12 +16,19 @@ def read_labels_from_file(file_path, have_confident=True):
                         class_id, x, y, w, h, confid = map(float, parts)
                     else:
                         class_id, x, y, w, h = map(float, parts)
-                        confid = 0
-                    labels.append((int(class_id), x, y, w, h, confid))
+                    labels.append((int(class_id), x, y, w, h))
     except FileNotFoundError:
         print(f"File not found: {file_path}")
     return labels
 
+
+def create_label_dict(file_path):
+   label_dict = {}
+   with open(file_path, 'r') as f:
+       classes = f.read().strip().split()
+       for idx, class_name in enumerate(classes):
+           label_dict[idx] = class_name
+   return label_dict
 
 # get the value for the label
 def get_label_index(label):
