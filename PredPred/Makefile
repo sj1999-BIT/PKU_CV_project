@@ -20,7 +20,7 @@ train: $(DATASET_FILE)
 	python $(TRAIN_SRC) --input $(DATASET_FILE) --split 10 --learning_rate 0.0001 --layer_1 1000 --layer_2 1000 --layer_3 100 --metrics_dir $(METRICS_DIR) | tee out.log
 
 visualize: $(VISUALIZE_SRC)
-	python $(VISUALIZE_SRC) --metrics $(METRICS_DIR) --output $(VISUALIZE_DIR) --dataset $(DATASET_FILE) --confusion_matrix $(METRICS_DIR)/metrics_9.dat
+	python $(VISUALIZE_SRC) --metrics $(METRICS_DIR) --output $(VISUALIZE_DIR) --dataset $(DATASET_FILE) --confusion_matrix $(METRICS_DIR)/metrics_100.dat
 
 inference: $(INFERENCE_SRC)
 	python $(INFERENCE_SRC) --model models/model_9.pth --glove $(GLOVE_FILE) --dataset $(DATASET_FILE) --layer_1 100 --layer_2 100 --layer_3 100 

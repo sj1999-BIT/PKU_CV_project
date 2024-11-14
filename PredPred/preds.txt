@@ -5,7 +5,7 @@ of: OF, of a
 wearing: WEARING, wears, wearing a
 with: with a
 behind
-holding
+holding: holds
 on top of
 near
 next to
@@ -31,57 +31,9 @@ carrying
 walking on
 eating
 on front of
-holds
 covering
 hanging from
 playing
-wearing
 laying on
 sitting in
 below
-along
-belonging to
-inside of
-between
-watching
-and
-looking at
-against
-painted on
-parked on
-from
-made of
-covered in
-to
-flying in
-across
-mounted on
-part of
-growing on
-lying on
-walking in
-crossing
-using
-outside
-on back of
-sitting at
-flying
-underneath
-worn by
-hanging in
-full of
-beneath
-covered with
-filled with
-says
-printed on
-riding a
-standing next to
-sitting on top of
-pulling
-in middle of
-touching
-swinging
-built into
-laying in
-adorning
