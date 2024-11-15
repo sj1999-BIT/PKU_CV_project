@@ -2,6 +2,7 @@ import torch
 import matplotlib.pyplot as plt
 import argparse
 import sys
+import os
 import logging
 import json
 
@@ -79,260 +80,491 @@ class Glove:
             return None
 
 
-class WordsFromFile:
-    def __init__(self, file_path):
-        self.word_to_id = {}
-        self.id_to_word = []
-        self.word_orig_id = {}
-        self.orig_id_to_word = []
-
-        with open(file_path, "r") as f:
-            for line in f:
-                x = str.split(line, ": ")
-                main = str.strip(x[0])
-                id = len(self.id_to_word)
-                self.id_to_word.append(main)
-                self.word_to_id[main] = id
-                self.word_orig_id[main] = len(self.orig_id_to_word)
-                self.orig_id_to_word.append(main)
-
-                if len(x) == 1:
-                    continue
-
-                subs = str.split(x[1], ", ")
-                for sub in subs:
-                    sub = str.strip(sub)
-                    self.word_to_id[sub] = id
-                    self.word_orig_id[sub] = len(self.orig_id_to_word)
-                    self.orig_id_to_word.append(sub)
-
-    def word_idx(self, word):
-        if word in self.word_to_id:
-            return self.word_to_id[word]
-        else:
-            return None
-
-    def get_word(self, idx):
-        return self.id_to_word[idx]
-
-    def word_orig_idx(self, word):
-        if word in self.word_orig_id:
-            return self.word_orig_id[word]
-        else:
-            return None
-
-    def get_orig_word(self, orig_idx):
-        return self.orig_id_to_word[orig_idx]
-
-
-class AllWords:
+class Triple:
     def __init__(self):
-        self.word_to_id = {}
-        self.id_to_word = []
+        self.pred = None
+        self.obj = None
+        self.subj = None
+        self.obb = None
+        self.sbb = None
+        self.img_id = None
+        self.in_img_id = None
 
-    def word_idx(self, word):
-        if word in self.word_to_id:
-            return self.word_to_id[word]
+    def __getitem__(self, idx):
+        return [self.pred, self.obj, self.subj, self.obb, self.sbb, self.img_id, self.in_img_id][idx]
+
+    def to_vec(self, glove, preds, objs, repeat_bbs_count):
+        p, o, s, obb, sbb = self.pred, self.obj, self.subj, self.obb, self.sbb
+        ov = glove.get(o)
+        sv = glove.get(s)
+
+        obb, sbb = Bounds.normalize(obb, sbb)
+
+        names = torch.tensor([
+            preds.get_class_id(p),
+            preds.get_word_id(p),
+            objs.get_class_id(o),
+            objs.get_word_id(o),
+            objs.get_class_id(s),
+            objs.get_word_id(s),
+        ])
+
+        x = [ov, sv]
+        for _ in range(repeat_bbs_count):
+            x.append(torch.tensor(
+                [obb.x1, obb.y1, obb.size()[0], obb.size()[1]]))
+            x.append(torch.tensor(
+                [sbb.x1, sbb.y1, sbb.size()[0], sbb.size()[1]]))
+            x.append(torch.tensor(obb.center()))
+            x.append(torch.tensor(sbb.center()))
+            x.append(torch.tensor([obb.x1 - sbb.x1, obb.y1 - obb.y1]))
+        x = torch.concat(x)
+        y = preds.get_class_id(p)
+        img = torch.tensor([self.img_id, self.in_img_id])
+
+        return x, y, names, img
+
+
+class SynonimSet:
+    def __init__(self):
+        self.word_to_class = {}
+        self.classes = []
+        self.unused = []
+        self.locked = False
+
+    def load(self, file):
+        with open(file, "r") as file:
+            for line in file:
+                x = str.split(line, ": ")
+                repr = str.strip(x[0])
+                syns = []
+                if len(x) > 1:
+                    for s in str.split(x[1], ", "):
+                        syns.append(str.strip(s))
+                self.add_class(repr, syns)
+            self.locked = True
+
+    def class_count(self):
+        return len(self.classes) - len(self.unused)
+
+    def representatives(self):
+        res = []
+        for c in self.classes:
+            if len(c) > 0:
+                res.append(c[0])
+        return res
+
+    def union(self, word1, word2):
+        c1 = self.get_class_id(word1)
+        c2 = self.get_class_id(word2)
+        if c1 == c2:
+            return
+        for w in self.classes[c2]:
+            self.word_to_class[w] = (c1, len(self.classes[c1]))
+            self.classes[c1].append(w)
+        self.classes[c2] = []
+        self.unused.append(c2)
+
+    def add_class(self, representative, synonims=[]):
+        if self.locked:
+            return
+
+        self.add_word(representative)
+        id = self.get_class_id(representative)
+        for s in synonims:
+            if s in self.word_to_class:
+                self.union(representative, s)
+            else:
+                self.word_to_class[s] = (id, len(self.classes[id]))
+                self.classes[id].append(s)
+
+    def add_word(self, word):
+        if word in self.word_to_class:
+            return
+        id = 0
+        if len(self.unused) > 0:
+            id = self.unused.pop(0)
         else:
-            id = len(self.id_to_word)
-            self.word_to_id[word] = id
-            self.id_to_word.append(word)
-            return id
+            id = len(self.classes)
+            self.classes.append([])
 
-    def get_word(self, idx):
-        return self.id_to_word[idx]
+        self.classes[id].append(word)
+        self.word_to_class[word] = (id, 0)
+        return
 
-    def word_orig_idx(self, word):
-        return self.word_idx(word)
+    def save(self, dir, name):
+        with open(f"{dir}/{name}", "w") as f:
+            for words in self.classes:
+                if len(words) == 1:
+                    f.write(f"{words[0]}\n")
+                else:
+                    f.write(f"{words[0]}: ")
+                    for i, w in enumerate(words[1:]):
+                        f.write(f"{w}")
+                        if i + 1 != len(words[1:]):
+                            f.write(", ")
+                        else:
+                            f.write("\n")
 
-    def get_orig_word(self, orig_idx):
-        return self.get_word(orig_idx)
+    def to_tensors(self):
+        # len(class0), len(w0)..len(wn), len(class1)
+        sizes = []
+        str_bytes = []
+        for words in self.classes:
+            sizes.append(len(words))
+            for w in words:
+                sizes.append(len(w))
+                for c in str.encode(w, "ascii"):
+                    str_bytes.append(c)
+
+        return torch.tensor(sizes), torch.tensor(str_bytes)
+
+    @staticmethod
+    def from_tensors(sizes, str_bytes):
+        res = SynonimSet()
+        cur_class = []
+        class_len = 0
+        str_start = 0
+        for size in sizes:
+            if class_len == 0:
+                class_len = size
+
+                if len(cur_class) > 0:
+                    res.add_class(cur_class[0], cur_class[1:])
+                    cur_class.clear()
+            else:
+                w = "".join(map(chr, str_bytes[str_start:str_start+size]))
+                cur_class.append(w)
+                str_start += size
+                class_len -= 1
+
+        if len(cur_class) > 0:
+            res.add_class(cur_class[0], cur_class[1:])
+
+        return res
+
+    def remove_class(self, representative):
+        id = self.word_to_class[representative][0]
+        self.classes[id] = []
+        self.unused.append(id)
+        del self.word_to_class[representative]
+
+    def get_repr(self, word):
+        if word not in self.word_to_class:
+            return None
+        return self.classes[self.word_to_class[word][0]][0]
+
+    def get_synonims(self, word):
+        return self.classes[self.word_to_class[word][0]][1:]
+
+    def get_class_id(self, word):
+        return self.word_to_class[word][0]
+
+    def get_word_id(self, word):
+        return self.word_to_class[word][1]
 
 
 class Dataset:
     def __init__(self, args):
         logging.info(f"Reading the glove '{args.glove}' file")
+        self.rng = torch.Generator().manual_seed(args.seed)
         self.glove = Glove(args.glove)
         self.args = args
 
-        if args.preds is not None:
-            logging.info(f"Reading predicates from '{args.preds}'")
-            self.preds = WordsFromFile(args.preds)
-        else:
-            logging.info(
-                "No predicate filter file given, all predicates are accepted")
-            self.preds = AllWords()
-
-        if args.objs is not None:
-            logging.info(f"Reading objects from '{args.objs}'")
-            self.objs = WordsFromFile(args.objs)
-        else:
-            logging.info(
-                "No objects filter file given, all objects are accepted")
-            self.objs = AllWords()
-
         logging.info(f"Reading triples from '{args.input}'")
         if str.endswith(args.input, ".json"):
-            logging.info("Parsing raw json...")
-            self.parse_json()
+            self.load_from_json()
         else:
-            logging.info("Reading processed triples")
-            self.triple_count, self.xs, self.ys, self.names = torch.load(
-                args.input,
-                weights_only=True
-            )
+            self.load_from_tensors(args.input)
 
         logging.info("Dataset constructed!")
-        logging.info("Postprocessing")
+
+    def load_from_json(self):
+        self.preds = SynonimSet()
+        self.objs = SynonimSet()
+
+        if self.args.preds is not None:
+            self.preds.load(self.args.preds)
+        if self.args.objs is not None:
+            self.objs.load(self.args.objs)
+
+        triples, pred_counts, obj_counts = self.parse_json()
+        logging.info("Stage 2: Dropping triples")
+        for round in range(self.args.round_limit):
+            logging.info(
+                f"Round {round}/{self.args.round_limit} of dropping triples")
+            triples, pred_counts, obj_counts, change = self.drop_triples(
+                triples, pred_counts, obj_counts)
+            if change == 0:
+                break
+
+        self.process_triples(triples, pred_counts, obj_counts)
+
+    def process_triples(self, triples, pred_counts, obj_counts):
+        logging.info("Stage 3: Processing triples")
+        logging.info(f"==== Triple count: {len(triples)}")
+        logging.info(f"==== Predicate count: {len(pred_counts)}")
+        logging.info(f"==== Object count: {len(obj_counts)}")
+
+        new_preds = SynonimSet()
+        new_objs = SynonimSet()
+        for word, _ in pred_counts.items():
+            new_preds.add_class(word, self.preds.get_synonims(word))
+        for word, _ in obj_counts.items():
+            new_objs.add_class(word, self.objs.get_synonims(word))
+
+        self.preds = new_preds
+        self.objs = new_objs
+        self.xs = torch.zeros(
+            (len(triples), self.input_size()),
+            dtype=torch.float
+        )
+        self.ys = torch.zeros(len(triples), dtype=torch.int64)
+        self.names = torch.zeros((len(triples), 6), dtype=torch.int64)
+        self.imgs = torch.zeros((len(triples), 2), dtype=torch.int64)
+
+        for i, t in enumerate(triples):
+            x, y, names, img = t.to_vec(
+                self.glove, self.preds, self.objs, self.args.repeat_bbs_count)
+            self.xs[i] = x
+            self.ys[i] = y
+            self.names[i] = names
+            self.imgs[i] = img
+
+            if i % 100_000 == 0:
+                logging.info(f"{i+1}/{len(triples)} triples processed..")
+
+    def save(self, file_path):
+        torch.save(
+            [
+                self.xs, self.ys, self.names, self.imgs,
+                self.preds.to_tensors(), self.objs.to_tensors()
+            ],
+            file_path,
+        )
+
+    def load_from_tensors(self, file_path):
+        self.xs, self.ys, self.names, self.imgs, preds, objs = torch.load(
+            file_path, weights_only=True
+        )
+
+        a, b = preds
+        self.preds = SynonimSet.from_tensors(a, b)
+        a, b = objs
+        self.objs = SynonimSet.from_tensors(a, b)
+
+    def input_size(self):
+        return self.args.repeat_bbs_count * (4 + 4 + 2 + 2 + 2) + 50 + 50
 
     def parse_json(self):
-        triples = {}
+        logging.info("Stage 1: reading raw triples")
         skipped = 0
+        triples = []
 
         with open(args.input, "r") as f:
             imgs = json.load(f)
             img_count = len(imgs)
 
             for i, img in enumerate(imgs):
-                for triple in img["relationships"]:
+                for j, triple in enumerate(img["relationships"]):
                     t = None
                     try:
                         t = self.parse_triple(triple)
                     except Exception as e:
                         logging.error(f"[{e}] Could not parse triple '{
                                       triple}' in img {i}")
-
                     if t is None:
                         skipped += 1
                         continue
-
-                    id = self.preds.word_idx(t[0])
-                    if t[0] not in triples:
-                        triples[id] = []
-                    triples[id].append(t)
-
+                    t.img_id = i
+                    t.in_img_id = j
+                    triples.append(t)
                 if i % 10_000 == 0:
-                    logging.info(f"Read {i+1}/{img_count} images...")
+                    logging.info(f"{i+1}/{img_count} images read...")
 
-        logging.info("Processing triples...")
-        self.process_data(triples)
+        pred_counts, obj_counts = self.count_triples(triples)
+        logging.info(f"Read {len(triples)} triples, skipped {skipped}")
+        logging.info(f"==== {len(pred_counts)} predicates")
+        logging.info(f"==== {len(obj_counts)} objects")
 
-    def process_data(self, triples):
-        pred_counts = torch.zeros(len(triples), dtype=torch.int64)
+        return triples, pred_counts, obj_counts
 
-        self.input_dim = None
-        for (pred_id, pred_triples) in triples.items():
-            if self.input_dim is None and len(pred_triples) != 0:
-                self.input_dim = len(self.to_vecs(pred_triples[0])[0])
-
-            assert pred_counts[pred_id] == 0
-            pred_counts[pred_id] = len(pred_triples)
-
-        triple_count = pred_counts.sum()
-        self.xs = torch.zeros(
-            (triple_count, self.input_dim),
-            dtype=torch.float
+    def drop_triples(self, triples, pred_counts, obj_counts):
+        change = 0
+        logging.info("Stage 2.1: Limiting too common predicates")
+        new_triples, pred_counts, obj_counts = self.upper_limit(
+            triples,
+            0,
+            pred_counts,
+            self.args.pred_max
         )
-        self.ys = torch.zeros(triple_count, dtype=torch.int64)
-        self.names = torch.zeros((triple_count, 6), dtype=torch.int64)
+        change += len(triples)-len(new_triples)
+        logging.info(f"Dropped {len(triples)-len(new_triples)} triples")
+        triples = new_triples
 
-        i = 0
-        for pred_id, pred_triples in triples.items():
-            for triple in pred_triples:
-                x, y, names = self.to_vecs(triple)
-                self.xs[i] = x
-                self.ys[i] = y
-                self.names[i] = names
-                i += 1
+        logging.info("Stage 2.2: Limiting too common objects")
+        new_triples, pred_counts, obj_counts = self.upper_limit(
+            triples,
+            1,
+            obj_counts,
+            self.args.obj_max
+        )
+        change += len(triples)-len(new_triples)
+        logging.info(f"Dropped {len(triples)-len(new_triples)} triples")
+        triples = new_triples
 
-                if i % 10_000 == 0:
-                    logging.info(f"Processed {i+1}/{triple_count} triples")
+        logging.info("Stage 2.3: Limiting too common subjects")
+        new_triples, pred_counts, obj_counts = self.upper_limit(
+            triples,
+            2,
+            obj_counts,
+            self.args.obj_max
+        )
+        change += len(triples)-len(new_triples)
+        logging.info(f"Dropped {len(triples)-len(new_triples)} triples")
+        triples = new_triples
 
-        self.triple_count = len(pred_counts)
-        if self.args.output is not None:
-            logging.info(f"Saving processed triples to '{self.args.output}'")
-            torch.save(
-                [self.triple_count, self.xs, self.ys, self.names],
-                self.args.output
-            )
+        logging.info("Stage 2.4: Dropping triples with uncommon predicates")
+        new_triples, pred_counts, obj_counts = self.lower_limit(
+            triples,
+            0,
+            pred_counts,
+            self.args.pred_min
+        )
+        change += len(triples)-len(new_triples)
+        logging.info(f"Dropped {len(triples)-len(new_triples)} triples")
+        triples = new_triples
 
-    def to_vecs(self, triple):
-        (pred_name, obj_name, subj_name, obj_bb, subj_bb) = triple
+        logging.info("Stage 2.5: Dropping triples with uncommon objects")
+        new_triples, pred_counts, obj_counts = self.lower_limit(
+            triples,
+            1,
+            obj_counts,
+            self.args.pred_min
+        )
+        change += len(triples)-len(new_triples)
+        logging.info(f"Dropped {len(triples)-len(new_triples)} triples")
+        triples = new_triples
 
-        o, s = Bounds.normalize(obj_bb, subj_bb)
-        oc = torch.tensor(o.center())
-        sc = torch.tensor(s.center())
-        d = torch.sub(sc, oc)
+        logging.info("Stage 2.6: Dropping triples with uncommon subjects")
+        new_triples, pred_counts, obj_counts = self.lower_limit(
+            triples,
+            2,
+            obj_counts,
+            self.args.pred_min
+        )
+        change += len(triples)-len(new_triples)
+        logging.info(f"Dropped {len(triples)-len(new_triples)} triples")
+        triples = new_triples
 
-        obj_main_name = self.objs.get_word(self.objs.word_idx(obj_name))
-        subj_main_name = self.objs.get_word(self.objs.word_idx(subj_name))
+        return new_triples, pred_counts, obj_counts, change
 
-        obj_vec = self.glove.get(obj_main_name)
-        subj_vec = self.glove.get(subj_main_name)
+    def lower_limit(self, triples, idx, counts, low):
+        dropped = []
+        for word, count in counts.items():
+            if low is not None and count < low:
+                dropped.append(word)
 
-        x = torch.concat((
-            obj_vec,
-            subj_vec,
-            torch.concat([
-                torch.concat((
-                    torch.tensor([o.x1, o.y1, o.size()[0], o.size()[1]]),
-                    torch.tensor([s.x1, s.y1, s.size()[0], s.size()[1]]),
-                    oc,
-                    sc,
-                    d
-                ))
-            ] * self.args.repeat_bbs_count),
-        ))
-        y = self.preds.word_idx(pred_name)
-        names = torch.tensor([
-            self.preds.word_orig_idx(pred_name),
-            self.preds.word_idx(pred_name),
-            self.objs.word_orig_idx(obj_name),
-            self.objs.word_idx(obj_name),
-            self.objs.word_orig_idx(subj_name),
-            self.objs.word_idx(subj_name),
-        ], dtype=torch.int64)
+        dropped = set(dropped)
+        new_triples = []
+        for t in triples:
+            if t[idx] in dropped:
+                continue
+            new_triples.append(t)
 
-        return x, y, names
+        new_pred_counts, new_obj_counts = self.count_triples(new_triples)
+        return new_triples, new_pred_counts, new_obj_counts
 
-    def parse_triple(self, triple):
-        pred_name = triple["predicate"]
-        obj_name = triple["object"]["name"]
-        subj_name = triple["subject"]["name"]
+    def upper_limit(self, triples, idx, counts, top):
+        drop_chance = {}
+        for word, count in counts.items():
+            if top is not None and count > top:
+                drop_chance[word] = top / count
 
-        pred_id = self.preds.word_idx(pred_name)
-        obj_id = self.objs.word_idx(obj_name)
-        subj_id = self.objs.word_idx(subj_name)
+        new_triples = []
+        for t in triples:
+            if t[idx] in drop_chance and torch.rand((1), generator=self.rng) < drop_chance[t[idx]]:
+                continue
+            new_triples.append(t)
 
-        if pred_id is None or obj_id is None or subj_id is None:
+        new_pred_counts, new_obj_counts = self.count_triples(new_triples)
+        return new_triples, new_pred_counts, new_obj_counts
+
+    def count_triples(self, triples):
+        pred_counts = {}
+        obj_counts = {}
+        for t in triples:
+            if t[0] not in pred_counts:
+                pred_counts[t[0]] = 0
+            if t[1] not in obj_counts:
+                obj_counts[t[1]] = 0
+            if t[2] not in obj_counts:
+                obj_counts[t[2]] = 0
+            pred_counts[t[0]] += 1
+            obj_counts[t[1]] += 1
+            obj_counts[t[2]] += 1
+
+        return pred_counts, obj_counts
+
+    def parse_triple(self, triple_json):
+        pred_name = str.lower(triple_json["predicate"])
+        obj_name = str.lower(triple_json["object"]["name"])
+        subj_name = str.lower(triple_json["subject"]["name"])
+
+        self.preds.add_class(pred_name)
+        self.objs.add_class(obj_name)
+        self.objs.add_class(subj_name)
+
+        t = Triple()
+        t.pred = self.preds.get_repr(pred_name)
+        t.obj = self.objs.get_repr(obj_name)
+        t.subj = self.objs.get_repr(subj_name)
+
+        if t.pred is None or t.obj is None or t.subj is None:
             return None
 
-        if self.glove.get(obj_name) is None or self.glove.get(subj_name) is None:
+        if self.glove.get(t.obj) is None or self.glove.get(t.subj) is None:
             return None
 
-        obj_bb = Bounds.from_corner_size(
-            int(triple["object"]["x"]),
-            int(triple["object"]["y"]),
-            int(triple["object"]["w"]),
-            int(triple["object"]["h"]),
+        t.obb = Bounds.from_corner_size(
+            float(triple_json["object"]["x"]),
+            float(triple_json["object"]["y"]),
+            float(triple_json["object"]["w"]),
+            float(triple_json["object"]["h"]),
         )
-        subj_bb = Bounds.from_corner_size(
-            int(triple["subject"]["x"]),
-            int(triple["subject"]["y"]),
-            int(triple["subject"]["w"]),
-            int(triple["subject"]["h"]),
-        )
-
-        return (
-            pred_name,
-            obj_name,
-            subj_name,
-            obj_bb,
-            subj_bb,
+        t.sbb = Bounds.from_corner_size(
+            float(triple_json["subject"]["x"]),
+            float(triple_json["subject"]["y"]),
+            float(triple_json["subject"]["w"]),
+            float(triple_json["subject"]["h"]),
         )
 
-    def split(self, split, seed):
-        pass
+        return t
+
+    def draw_predicates(self):
+        counts = torch.zeros(self.preds.class_count())
+        for y in self.ys:
+            counts[y] += 1
+
+        plt.title("Frequency of predicates")
+        plt.ylabel("Number of triples")
+        plt.tick_params(axis="x", labelrotation=90)
+        plt.bar(self.preds.representatives(), counts)
+        plt.show()
+        # plt.savefig("visuals/preds_full.svg")
+
+    def draw_objects(self):
+        counts = torch.zeros(self.objs.class_count())
+        for x in self.names:
+            counts[x[2]] += 1
+            counts[x[4]] += 1
+
+        plt.title("Frequency of Objects")
+        plt.ylabel("Number of triples")
+        plt.tick_params(axis="x", labelrotation=90)
+        plt.bar(self.objs.representatives(), counts)
+        plt.show()
+        # plt.savefig("visuals/objs_full.svg")
 
 
 parser = argparse.ArgumentParser()
@@ -343,7 +575,13 @@ parser.add_argument(
 )
 parser.add_argument(
     "--output",
-    help="If 'input' is a .json, saves the proccessed triples here. If not set, triples are not saved",
+    help="If input is .json, save the processed dataset in this file",
+)
+parser.add_argument(
+    "--round_limit",
+    help="Limit the number of rounds of dropping triples",
+    default=100,
+    type=int,
 )
 parser.add_argument(
     "--glove",
@@ -375,35 +613,27 @@ parser.add_argument(
 )
 parser.add_argument(
     "--obj_min",
-    help="If the object is used in a smaller % of triples, drop it",
-    type=float,
-    default=0.006666667,
-)
-parser.add_argument(
-    "--objs_output",
-    help="Output for allowed objects file",
-)
-parser.add_argument(
-    "--preds_output",
-    help="Output for allowed predicates file",
+    help="If the object is used less than obj_min times, drop triples with it",
+    type=int,
+    default=100,
 )
 parser.add_argument(
     "--obj_max",
-    help="Drop triples if object is used in more than % of triples",
-    type=float,
-    default=100.0
+    help="Drop triples if an object is used more than obj_max times. If not set, do not drop triples",
+    type=int,
+    default=300_000
 )
 parser.add_argument(
     "--pred_min",
-    help="If the predicate is used in a smaller % of triples, drop it",
-    type=float,
-    default=0.006666667,
+    help="If the predicate is used less than pred_min times, drop triples with it",
+    type=int,
+    default=100,
 )
 parser.add_argument(
     "--pred_max",
-    help="Drop triples if predicate is used in more than % of triples",
-    type=float,
-    default=100.0
+    help="Drop triples if an predicate is used more than pred_max times. If not set, do not drop triples",
+    type=int,
+    default=300_000
 )
 parser.add_argument(
     "--seed",
@@ -425,3 +655,7 @@ if __name__ == "__main__":
     )
 
     ds = Dataset(args)
+    if args.output is not None:
+        ds.save(args.output)
+    ds.draw_predicates()
+    ds.draw_objects()
