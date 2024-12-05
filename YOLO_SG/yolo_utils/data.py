@@ -7,7 +7,7 @@ import yaml
 import random
 
 from tqdm import tqdm
-from .label_utils import *
+from yolo_utils.label_utils import *
 
 
 rootpath = os.path.join(os.getcwd(), '..')
@@ -16,9 +16,9 @@ sys.path.append(rootpath)
 
 
 # only print if code is testing
-def test_log(log_stmt, is_log_printing):
-    if is_log_printing:
-        print(log_stmt)
+# def test_log(log_stmt, is_log_printing):
+#     if is_log_printing:
+#         print(log_stmt)
 
 # function generate true based on input percentage
 def random_true(true_chance=10):
@@ -529,6 +529,293 @@ def forced_removal_new_data(original_data_path, label_count, new_data_path=None,
             print(f"Label {i}: Original: {label_count[i]}, New: {current_count[i]}")
 
     return new_data_path
+
+
+# def convert_SGData_to_yoloData(original_data_path):
+#     """
+#     original data directory:
+#     #   └── images
+#     #   └── labels
+#     #       └── object labels.txt
+#     #       └── predicate labels.txt
+#     #       └── object labels
+#     #       └── predicate labels
+#     idea: SG data includes bounding boxes of object, subjects, and the predicates.
+#
+#     """
+
+def is_obj_overlap_pred(obj_label, pred_label, IoU_threshold=0.5):
+    """
+    Check if the obj label overlaps sufficiently with the pred label
+    """
+    # check if out of bound
+    if get_centre_x(obj_label) < get_x_min(pred_label) or get_centre_x(obj_label) > get_x_max(pred_label) or \
+            get_centre_y(obj_label) < get_y_min(pred_label) or get_centre_y(obj_label) > get_y_max(pred_label):
+        return False
+
+    # check if sufficient IoU
+    # obj must be second input for IoU to be calculated correctly
+    # value is amount of obj box overlapped as percentage.
+    if calculate_iou(xyxy_cxcywh(*get_label_box(pred_label)),
+                     get_label_box(obj_label),
+                     is_only_extension=True) < IoU_threshold:
+        return False
+
+    return True
+
+def cluster_algo(obj_label_data, pred_label_data):
+    """
+    Given 2 list of data, return a dict
+    key: pred yolo label's index in the given label data list
+    val: list of index of yolo label in original label data that overlaps with this predicate
+
+    idea: O(nlogn) algo of interval overlap
+    1. set dict to map each pred coord to its original index in the input list
+    2. sort obj label cx in ascending order, sort pred based on leftmost value, get overlapped values
+    3. repeat for cy
+    4. keep only obj that overlap both cx and cy
+    5. run IoU, at least 50% of the obj box must overlap with the pred box
+    """
+
+    dict_predIndex_to_objIndex_list = {}
+
+    # convert the cxcywh of pred to xyxy, we also contain the original pred index
+    xyxy_index_pred_label_data = [[label[0], *cxcywh_to_xyxy(*label[1:]), i] for i, label in enumerate(pred_label_data)]
+    # sort based on x_min
+    xyxy_index_pred_label_data.sort(key=lambda x:get_x_min(x))
+
+    # preserve original label index in the input obj label list
+    index_obj_label_data = [[*label, i] for i, label in enumerate(obj_label_data)]
+    # sort based on center_x
+    index_obj_label_data.sort(key=lambda x:get_centre_x(x))
+
+    # get the original index
+    def get_original_index(cur_label):
+        return cur_label[-1]
+
+
+
+    # each predicate only go through once
+    cur_sorted_pred_index = 0
+
+
+    # start at index where obj cx is larger than x_min of cur predicate
+    starting_obj_index = 0
+
+    while cur_sorted_pred_index < len(xyxy_index_pred_label_data):
+        cur_xyxy_pred_label = xyxy_index_pred_label_data[cur_sorted_pred_index]
+        # we get the range of current predicate
+        cur_x_min = get_x_min(cur_xyxy_pred_label)
+        cur_x_max = get_x_max(cur_xyxy_pred_label)
+        cur_y_min = get_y_min(cur_xyxy_pred_label)
+        cur_y_max = get_y_max(cur_xyxy_pred_label)
+
+        # update starting obj, only care if its still within boundary
+        while starting_obj_index < len(index_obj_label_data) and \
+                get_centre_x(index_obj_label_data[starting_obj_index]) < cur_x_min:
+            starting_obj_index += 1
+
+        cur_sort_obj_index = starting_obj_index
+        while cur_sort_obj_index < len(index_obj_label_data):
+            cur_obj_label = index_obj_label_data[cur_sort_obj_index]
+            if get_centre_x(cur_obj_label) > cur_x_max:
+                # out of x boundary, no more obj in range of current predicate
+                break
+            if get_centre_y(cur_obj_label) < cur_y_min or \
+                    get_centre_y(cur_obj_label) > cur_y_max:\
+                # out of y boundary, current obj cannot overlap enough with predicate
+                continue
+
+            # at this point centre of obj is within the predicate, we can calculate the IoU to confirm
+            # our IoU function takes in 2 tuple of cx cy w h
+
+            original_pred_index = get_original_index(cur_xyxy_pred_label)
+
+            pred_box = get_label_box(pred_label_data[original_pred_index])
+
+            if calculate_iou(pred_box,
+                             get_label_box(cur_obj_label),
+                             is_only_extension=True) < 0.5:
+                # insufficient overlap
+                continue
+
+            if original_pred_index not in dict_predIndex_to_objIndex_list:
+                dict_predIndex_to_objIndex_list[original_pred_index] = []
+            dict_predIndex_to_objIndex_list[original_pred_index].append(get_original_index(cur_obj_label))
+
+            # move to next obj
+            cur_sort_obj_index += 1
+
+        # once we done move to next predicate
+        cur_sorted_pred_index += 1
+
+
+
+
+
+
+    # # we start with the leftmost pred
+    # cur_pred_index = 0
+    # cur_obj_index = 0
+    # cur_x_min = get_x_min(xyxy_index_pred_label_data[cur_pred_index])
+    # cur_x_max = get_x_max(xyxy_index_pred_label_data[cur_pred_index])
+    #
+    # while cur_pred_index < len(xyxy_index_pred_label_data) and cur_obj_index < len(index_obj_label_data):
+    #
+    #     # we checking this cur_obj_label_data
+    #     cur_obj_label_data = index_obj_label_data[cur_obj_index]
+    #     # only store the original index
+    #     original_obj_index = get_original_index(cur_obj_label_data)
+    #
+    #     if get_centre_x(cur_obj_label_data) < cur_x_min:
+    #         # no , obj no interact with the x smallest bound
+    #         cur_obj_index += 1
+    #         continue
+    #
+    #     # all subsquent obj are out of bound of this predicate
+    #     # move to a more right predicate
+    #     if get_centre_x(cur_obj_label_data) > cur_x_max:
+    #         cur_pred_index += 1
+    #         cur_x_min = get_x_min(xyxy_index_pred_label_data[cur_pred_index])
+    #         cur_x_max = get_x_max(xyxy_index_pred_label_data[cur_pred_index])
+    #         continue
+    #
+    #     next_pred_index = cur_pred_index
+    #
+    #     # loop to get all x that overlaps
+    #     while get_centre_x(cur_obj_label_data) > get_x_min(xyxy_index_pred_label_data[next_pred_index]) and \
+    #             next_pred_index < len(xyxy_index_pred_label_data):
+    #         # we then check if x overlaps with this pred
+    #         # need to get the original pred cxcywh format for iou calculation
+    #         # this is a rightfully overlapped label, stored in the model
+    #         original_pred_index = get_original_index(xyxy_index_pred_label_data[next_pred_index])
+    #         cxcywh_next_pred_label = pred_label_data[original_pred_index]
+    #         if is_obj_overlap_pred(cur_obj_label_data, cxcywh_next_pred_label, IoU_threshold=0.5):
+    #             if original_pred_index not in dict_predIndex_to_objIndex_list:
+    #                 dict_predIndex_to_objIndex_list[original_pred_index] = []
+    #             dict_predIndex_to_objIndex_list[original_pred_index].append(original_obj_index)
+    #         # move to next predicate
+    #         next_pred_index += 1
+    #
+    #     # move to next object
+    #     cur_obj_index += 1
+    #
+    return dict_predIndex_to_objIndex_list
+
+# def cluster_algo(obj_label_data, pred_label_data):
+#     """
+#     Given 2 list of data, return a dict
+#     key: pred yolo label's index in the given label data list
+#     val: list of index of yolo label in original label data that overlaps with this predicate
+#
+#     idea: O(nlogn) algo of interval overlap
+#     1. set dict to map each pred coord to its original index in the input list
+#     2. sort obj label cx in ascending order, sort pred based on leftmost value, get overlapped values
+#     3. repeat for cy
+#     4. keep only obj that overlap both cx and cy
+#     5. run IoU, at least 50% of the obj box must overlap with the pred box
+#     """
+#
+#     dict_predIndex_to_objIndex_list = {}
+#
+#     # convert the cxcywh of pred to xyxy, we also contain the original pred index
+#     xyxy_index_pred_label_data = [[label[0], *cxcywh_to_xyxy(*label[1:]), i] for i, label in enumerate(pred_label_data)]
+#
+#     # preserve original label index in the input obj label list
+#     index_obj_label_data = [[*label, i] for i, label in enumerate(obj_label_data)]
+#
+#     # get the original index
+#     def get_original_index(cur_label):
+#         return cur_label[-1]
+#
+#     # sort based on x_min
+#     xyxy_index_pred_label_data.sort(key=lambda x:get_x_min(x))
+#
+#     # sort based on center_x
+#     index_obj_label_data.sort(key=lambda x:get_centre_x(x))
+#
+#     # we start with the leftmost pred
+#     cur_pred_index = 0
+#     cur_obj_index = 0
+#     cur_x_min = get_x_min(xyxy_index_pred_label_data[cur_pred_index])
+#     cur_x_max = get_x_max(xyxy_index_pred_label_data[cur_pred_index])
+#
+#     while cur_pred_index < len(xyxy_index_pred_label_data) and cur_obj_index < len(index_obj_label_data):
+#
+#         print(f"cur_pred_index: {cur_pred_index}")
+#         print(f"cur_obj_index: {cur_obj_index}")
+#
+#         # we checking this cur_obj_label_data
+#         cur_obj_label_data = index_obj_label_data[cur_obj_index]
+#         # only store the original index
+#         original_obj_index = get_original_index(cur_obj_label_data)
+#
+#         if get_centre_x(cur_obj_label_data) < cur_x_min:
+#             # no , obj no interact with the x smallest bound
+#             cur_obj_index += 1
+#             continue
+#
+#         # all subsquent obj are out of bound of this predicate
+#         # move to a more right predicate
+#         if get_centre_x(cur_obj_label_data) > cur_x_max:
+#             cur_pred_index += 1
+#             cur_x_min = get_x_min(xyxy_index_pred_label_data[cur_pred_index])
+#             cur_x_max = get_x_max(xyxy_index_pred_label_data[cur_pred_index])
+#             continue
+#
+#         next_pred_index = cur_pred_index
+#
+#         # need to
+#         next_pred_label = xyxy_index_pred_label_data[next_pred_index]
+#
+#
+#
+#         # loop to get all x that overlaps
+#         while get_centre_x(cur_obj_label_data) > get_x_min(next_pred_label) and \
+#                 next_pred_index < len(xyxy_index_pred_label_data):
+#             next_pred_label = xyxy_index_pred_label_data[next_pred_index]
+#             # we then check if x overlaps with this pred
+#             # need to get the original pred cxcywh format for iou calculation
+#             # this is a rightfully overlapped label, stored in the model
+#             original_pred_index = get_original_index(next_pred_label)
+#             cxcywh_next_pred_label = pred_label_data[original_pred_index]
+#             if is_obj_overlap_pred(cur_obj_label_data, cxcywh_next_pred_label, IoU_threshold=0.5):
+#
+#                 if get_original_index(original_pred_index) not in dict_predIndex_to_objIndex_list.keys():
+#                     dict_predIndex_to_objIndex_list[next_pred_index] = []
+#                 dict_predIndex_to_objIndex_list[next_pred_index].append(original_obj_index)
+#             # move to next predicate
+#             next_pred_index += 1
+#
+#
+#     return dict_predIndex_to_objIndex_list
+
+
+if __name__=="__main__":
+    # we choose a specific image with groups of bounding box
+    img_filename = "000000000139.jpg"
+    txt_filename = "000000000139.txt"
+    datapath = "D:\Shui Jie\PHD school\Computational Vision\PKU_CV_project\YOLO_SG\coco_dataset//5k_data"
+
+    obj_label = read_labels_from_file(os.path.join(datapath, "obj_labels", txt_filename), have_confident=False)
+    pred_label = read_labels_from_file(os.path.join(datapath, "rel_labels", txt_filename), have_confident=False)
+
+    print(cluster_algo(obj_label, pred_label))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

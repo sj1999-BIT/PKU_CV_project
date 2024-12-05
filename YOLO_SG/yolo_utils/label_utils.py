@@ -37,7 +37,26 @@ def get_label_index(label):
 
 # get the x,y,w,h value from the label
 def get_label_box(label):
-    return label[1:-1]
+    return label[1:5]
+
+def get_x_min(label):
+    return label[1]
+
+def get_y_min(label):
+    return label[2]
+
+def get_x_max(label):
+    return label[3]
+
+def get_y_max(label):
+    return label[4]
+
+def get_centre_x(label):
+    return label[1]
+
+def get_centre_y(label):
+    return label[2]
+
 
 
 def label_stats(label_dict, data_folder_path, have_confident=True):
