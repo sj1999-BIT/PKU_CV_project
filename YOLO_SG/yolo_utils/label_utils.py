@@ -194,6 +194,11 @@ def merge_cxcywh(box1, box2):
     Returns:
     - A tuple (x_center, y_center, box_height, box_width) of the new bounding box that covers both.
     """
+
+    # Convert inputs to tensors
+    box1 = torch.tensor(box1)
+    box2 = torch.tensor(box2)
+
     # Unpack the input boxes
     x_center1, y_center1, box_width1, box_height1 = box1
     x_center2, y_center2, box_width2, box_height2 = box2
