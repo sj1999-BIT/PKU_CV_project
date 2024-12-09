@@ -30,6 +30,7 @@ def create_label_dict(file_path):
            label_dict[idx] = class_name
    return label_dict
 
+
 # get the value for the label
 def get_label_index(label):
     return int(label[0])
