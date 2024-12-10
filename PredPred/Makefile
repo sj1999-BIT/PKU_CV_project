@@ -10,6 +10,7 @@ VISUALIZE_SRC := $(SRC_DIR)/visualize.py
 VISUALIZE_DIR := visuals 
 INFERENCE_SRC := $(SRC_DIR)/inference.py
 PREDS_TXT := preds.txt
+DEVICE := cuda
 
 $(DATASET_FILE): $(GLOVE_FILE) $(DATASET_SRC) $(PREDS_TXT)
 	python $(DATASET_SRC) --input $(RELS_FILE) --output $(DATASET_FILE) --glove $(GLOVE_FILE) --allowed_preds $(PREDS_TXT)
@@ -17,7 +18,7 @@ $(DATASET_FILE): $(GLOVE_FILE) $(DATASET_SRC) $(PREDS_TXT)
 dataset: $(DATASET_FILE)
 
 train: $(DATASET_FILE) 
-	python $(TRAIN_SRC) --input $(DATASET_FILE) --split 10 --learning_rate 0.0001 --layer_1 1000 --layer_2 1000 --layer_3 100 --metrics_dir $(METRICS_DIR) | tee out.log
+	python $(TRAIN_SRC) --input $(DATASET_FILE) --split 10 --learning_rate 0.0001 --layer_1 1000 --layer_2 1000 --layer_3 100 --metrics_dir $(METRICS_DIR) --device $(DEVICE) | tee out.log
 
 visualize: $(VISUALIZE_SRC)
 	python $(VISUALIZE_SRC) --metrics $(METRICS_DIR) --output $(VISUALIZE_DIR) --dataset $(DATASET_FILE) --confusion_matrix $(METRICS_DIR)/metrics_100.dat

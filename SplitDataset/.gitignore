@@ -6,4 +6,3 @@ sample_data/
 images/
 visualise_check.py
 yoloData_to_json.py
-Makefile
