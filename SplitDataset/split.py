@@ -6,6 +6,8 @@ import os
 import shutil
 import logging
 import json
+import numpy as np
+import torch
 
 
 class Bounds:
@@ -64,6 +66,8 @@ class Bounds:
         )
         return [s, o]
 
+    def to_array(self):
+        return np.array([self.x1, self.y1, self.x2, self.y2])
 
 class Glove:
     def __init__(self, glove_file_path):
@@ -227,30 +231,103 @@ class Dataset:
         triples, pred_counts, obj_counts = self.parse_json()
 
         logging.info("Stage 3: Dropping triples")
-        for round in range(self.args.round_limit):
-            logging.info(
-                f"Round {round}/{self.args.round_limit} of dropping triples")
-            triples, pred_counts, obj_counts, change = self.drop_triples(
-                triples, pred_counts, obj_counts)
-            if len(triples) == 0:
-                logging.warning("Triples empty!")
-            if change == 0:
-                break
+        if (self.args.trim):
+            for round in range(self.args.round_limit):
+                logging.info(
+                    f"Round {round}/{self.args.round_limit} of dropping triples")
+                triples, pred_counts, obj_counts, change = self.drop_triples(
+                    triples, pred_counts, obj_counts)
+                if len(triples) == 0:
+                    logging.warning("Triples empty!")
+                if change == 0:
+                    break
+        else:
+            logging.info("Skipped!")
 
         logging.info("Stage 3: Splitting triples")
-        subsets = self.split(triples, pred_counts)
-        logging.info(f"Split into {len(subsets)} subsets")
+        if self.args.split:
+            subsets = self.split(triples, pred_counts)
+            logging.info(f"Split into {len(subsets)} subsets")
+        else:
+            subsets = [triples]
+            logging.info("Skipped!")
 
         logging.info("Stage 4: Converting to YOLO format")
-        if not os.path.exists(self.args.output):
-            os.mkdir(self.args.output)
+        if self.args.yolo:
+            if not os.path.exists(self.args.output):
+                os.mkdir(self.args.output)
 
-        for i in range(len(subsets)):
-            self.convert(i, subsets[i])
+            for i in range(len(subsets)):
+                self.yolo_convert(i, subsets[i])
+        else:
+            logging.info("Skipped!")
+
+        logging.info("Stage 5: Converting to binary format")
+        if self.args.binary:
+            if not os.path.exists(self.args.output):
+                os.mkdir(self.args.output)
+            for i in range(len(subsets)):
+                self.binary_convert(i, subsets[i])
+        else:
+            logging.info("Skipped!")
 
         logging.info("Dataset converted!")
 
-    def convert(self, i, triples):
+    def binary_convert(self, i, triples):
+        # input: obj_vec, subj_vec, [obj_bb, subj_bb, obj_bb_center, subj_bb_center, bb_diff] * cnt
+        if len(triples) == 0:
+            logging.warning(f"Triple subset {i} is empty")
+            return
+        prefix = f"{self.args.output}/subset_{i}"
+        logging.info(f"Converting subset {i}, saved in {prefix}")
+        if not os.path.exists(prefix):
+            os.mkdir(prefix)
+
+        pred_counts, obj_counts = self.count_triples(triples)
+        new_preds = SynonimSet()
+        new_objs = SynonimSet()
+        for word, _ in pred_counts.items():
+            new_preds.add_class(word, self.preds.get_synonims(word))
+        for word, _ in obj_counts.items():
+            new_objs.add_class(word, self.objs.get_synonims(word))
+
+        cnt = 5
+        input_size = 2 + 50 + 50 + (4 + 4 + 2 + 2 + 2) * cnt
+        xs = torch.zeros((len(triples) , input_size))
+        ys = torch.zeros((len(triples), new_preds.class_count()))
+
+        percent_step = 5
+        prev_percent = -percent_step
+        for i, t in enumerate(triples):
+            obj_vec = self.glove.get(t.obj)
+            subj_vec = self.glove.get(t.subj)
+            obj_bb, subj_bb = t.obb.normalize(t.sbb)
+            oc = np.array(obj_bb.center())
+            sc = np.array(subj_bb.center())
+            diff = sc - oc
+
+            xs[i] = torch.concat([
+                torch.tensor([new_objs.get_class_id(t.obj)]),
+                torch.tensor([new_objs.get_class_id(t.subj)]),
+                obj_vec,
+                subj_vec,
+                torch.from_numpy(np.repeat(np.concat([
+                    obj_bb.to_array(),
+                    subj_bb.to_array(),
+                    oc,
+                    sc,
+                    diff
+                ]), cnt))
+            ])
+            ys[i][new_preds.get_class_id(t.pred)] = 1.0
+
+            if (i * 100) // len(triples) >= prev_percent + percent_step:
+                prev_percent = (i * 100) // len(triples)
+                logging.info(f"{prev_percent}% done...")
+
+        torch.save([xs, ys], f"{prefix}/dataset.bin")
+
+    def yolo_convert(self, i, triples):
         if len(triples) == 0:
             logging.warning(f"Triple subset {i} is empty")
             return
@@ -600,16 +677,14 @@ parser.add_argument(
 parser.add_argument(
     "--image_data",
     help="Path to the image_data.json file",
-    required=True
 )
 parser.add_argument(
     "--vg",
     help="Path to the vg images (folder with VG_100K and VG_100K_2)",
-    required=True,
 )
 parser.add_argument(
     "--output",
-    help="Directory to output YOLO format files",
+    help="Directory for output",
     required=True
 )
 parser.add_argument(
@@ -675,6 +750,26 @@ parser.add_argument(
     help="Split the dataset by predicate usage, where pred_max/pred_min < split_factor",
     type=float,
     default=5.0,
+)
+parser.add_argument(
+    "--yolo",
+    help="Convert to yolo?",
+    action='store_true'
+)
+parser.add_argument(
+    "--binary",
+    help="Convert to binary?",
+    action='store_true'
+)
+parser.add_argument(
+    "--trim",
+    help="Trim common/uncommon predicates and objects?",
+    action='store_true'
+)
+parser.add_argument(
+    "--split",
+    help="Split the dataset?",
+    action='store_true'
 )
 
 
