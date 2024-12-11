@@ -16,11 +16,19 @@ def read_labels_from_file(file_path, have_confident=True):
                         class_id, x, y, w, h, confid = map(float, parts)
                     else:
                         class_id, x, y, w, h = map(float, parts)
-                        confid = 0
-                    labels.append((int(class_id), x, y, w, h, confid))
+                    labels.append((int(class_id), x, y, w, h))
     except FileNotFoundError:
         print(f"File not found: {file_path}")
     return labels
+
+
+def create_label_dict(file_path):
+   label_dict = {}
+   with open(file_path, 'r') as f:
+       classes = f.read().strip().split()
+       for idx, class_name in enumerate(classes):
+           label_dict[idx] = class_name
+   return label_dict
 
 
 # get the value for the label
@@ -30,7 +38,26 @@ def get_label_index(label):
 
 # get the x,y,w,h value from the label
 def get_label_box(label):
-    return label[1:-1]
+    return label[1:5]
+
+def get_x_min(label):
+    return label[1]
+
+def get_y_min(label):
+    return label[2]
+
+def get_x_max(label):
+    return label[3]
+
+def get_y_max(label):
+    return label[4]
+
+def get_centre_x(label):
+    return label[1]
+
+def get_centre_y(label):
+    return label[2]
+
 
 
 def label_stats(label_dict, data_folder_path, have_confident=True):
@@ -168,6 +195,11 @@ def merge_cxcywh(box1, box2):
     Returns:
     - A tuple (x_center, y_center, box_height, box_width) of the new bounding box that covers both.
     """
+
+    # Convert inputs to tensors
+    box1 = torch.tensor(box1)
+    box2 = torch.tensor(box2)
+
     # Unpack the input boxes
     x_center1, y_center1, box_width1, box_height1 = box1
     x_center2, y_center2, box_width2, box_height2 = box2
@@ -222,3 +254,4 @@ def calculate_iou(box1, box2, is_only_extension=False, is_original=False):
         two_overlap = inter_area / float(box2_area)
 
     return max(one_overlap, two_overlap)
+
