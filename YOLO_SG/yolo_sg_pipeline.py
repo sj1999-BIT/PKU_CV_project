@@ -95,7 +95,7 @@ def parallel_yolo_detection(loaded_Models_list, label_mapping_list, image):
         loaded_Models_list (list): List of loaded YOLO model objects
         label_mapping_list (list): List of dictionaries mapping original model indices
                                  to combined label indices
-        image (numpy.ndarray): Input image for detection (BGR format)
+        image (numpy.ndarray / string): Input image for detection (BGR format) or string img filepath
 
     Returns:
         list: List of detections where each detection is a dictionary containing:
@@ -153,9 +153,21 @@ def parallel_yolo_detection(loaded_Models_list, label_mapping_list, image):
     return all_detections
 
 
-def yolo_sg_application(obj_loaded_Models_list, obj_label_mapping_list, obj_combine_label_dict,
-                        rel_loaded_Models_list, rel_label_mapping_list, rel_combine_label_dict,
-                        img_path, is_save_label_img=False):
+"""
+obj_loaded_Models_list (list): List of loaded object detection YOLO models
+obj_label_mapping_list (list): Label mappings for object detection models
+obj_combine_label_dict (dict): Combined label dictionary for objects
+rel_loaded_Models_list (list): List of loaded relationship detection YOLO models
+rel_label_mapping_list (list): Label mappings for relationship detection models
+rel_combine_label_dict (dict): Combined label dictionary for relationships
+"""
+obj_model_folder_path = "weights/object_models"
+rel_model_folder_path = "weights/relationship_models"
+obj_loaded_Models_list, obj_label_mapping_list, obj_combine_label_dict = load_yolo_model(obj_model_folder_path)
+rel_loaded_Models_list, rel_label_mapping_list, rel_combine_label_dict = load_yolo_model(rel_model_folder_path)
+
+
+def yolo_sg_application(img_path, is_save_label_img=False):
     """
     Performs parallel object and relationship detection using YOLO models and generates scene graph data.
 
@@ -163,13 +175,7 @@ def yolo_sg_application(obj_loaded_Models_list, obj_label_mapping_list, obj_comb
     Optionally saves labeled images showing detected objects and relationships.
 
     Args:
-        obj_loaded_Models_list (list): List of loaded object detection YOLO models
-        obj_label_mapping_list (list): Label mappings for object detection models
-        obj_combine_label_dict (dict): Combined label dictionary for objects
-        rel_loaded_Models_list (list): List of loaded relationship detection YOLO models
-        rel_label_mapping_list (list): Label mappings for relationship detection models
-        rel_combine_label_dict (dict): Combined label dictionary for relationships
-        img (numpy.ndarray): Input image array
+        img_path (str): Input image path
         is_save_label_img (bool): Whether to save visualization of detections
 
     Returns:
@@ -234,17 +240,17 @@ def yolo_sg_application(obj_loaded_Models_list, obj_label_mapping_list, obj_comb
         rel_label_data,
         obj_combine_label_dict,
         rel_combine_label_dict,
-        output_path="testing_images/out_json"
+        output_path="testing_images/out_json",
+        save_json=is_save_label_img
     )
 
     return json_data
 
 
+
+
 if __name__ == "__main__":
-    obj_model_folder_path = "weights/object_models"
-    rel_model_folder_path = "weights/relationship_models"
-    obj_loaded_Models_list, obj_label_mapping_list, obj_combine_label_dict = load_yolo_model(obj_model_folder_path)
-    rel_loaded_Models_list, rel_label_mapping_list, rel_combine_label_dict = load_yolo_model(rel_model_folder_path)
+
 
     testing_img_folder = "testing_images/images"
 
@@ -265,11 +271,9 @@ if __name__ == "__main__":
         #     continue
 
         start_time = time.time()
-        img_path = os.path.join(testing_img_folder, img_filename)
+        img_filepath = os.path.join(testing_img_folder, img_filename)
 
-        yolo_sg_application(obj_loaded_Models_list, obj_label_mapping_list, obj_combine_label_dict,
-                            rel_loaded_Models_list, rel_label_mapping_list, rel_combine_label_dict, img_path,
-                            is_save_label_img=True)
+        yolo_sg_application(img_filepath, is_save_label_img=True)
 
         # label data
         # obj_label_data = parallel_yolo_detection(loaded_Models_list, label_mapping_list, img_path)

@@ -14,10 +14,12 @@ from collections import defaultdict
 
 from tqdm import tqdm
 
+
 # only print if code is testing
 def test_log(log_stmt, is_log_printing):
     if is_log_printing:
         print(log_stmt)
+
 
 # clears up the folder
 def clear_folder(folder_path, is_log_printing=False):
@@ -36,44 +38,48 @@ def clear_folder(folder_path, is_log_printing=False):
     else:
         test_log("Folder does not exist or is not a directory.", is_log_printing)
 
+
 def create_folder(folder_path, is_log_printing=False):
     # Create the output folder if it doesn't exist
     if not os.path.exists(folder_path):
         test_log(f"new folder created {folder_path}", is_log_printing)
         os.makedirs(folder_path)
 
+
 def read_labels_from_file(file_path, have_confident=True):
     labels = []
     try:
         with open(file_path, 'r') as file:
-                for line in file:
-                    parts = line.strip().split()
-                    if have_confident:
-                        class_id, x, y, w, h, confid = map(float, parts)
-                    else:
-                        class_id, x, y, w, h = map(float, parts)
-                    labels.append((int(class_id), x, y, w, h))
+            for line in file:
+                parts = line.strip().split()
+                if have_confident:
+                    class_id, x, y, w, h, confid = map(float, parts)
+                else:
+                    class_id, x, y, w, h = map(float, parts)
+                labels.append((int(class_id), x, y, w, h))
     except FileNotFoundError:
         print(f"File not found: {file_path}")
     return labels
 
 
 def create_label_dict(file_path):
-   label_dict = {}
-   with open(file_path, 'r') as f:
-       classes = f.read().strip().split()
-       for idx, class_name in enumerate(classes):
-           label_dict[idx] = class_name
-   return label_dict
+    label_dict = {}
+    with open(file_path, 'r') as f:
+        classes = f.read().strip().split()
+        for idx, class_name in enumerate(classes):
+            label_dict[idx] = class_name
+    return label_dict
 
 
 # get the x,y,w,h value from the label
 def get_label_box(label):
     return label[1:5]
 
+
 # get the value for the label
 def get_label_index(label):
     return int(label[0])
+
 
 def convert_index_to_data(dict_predIndex_to_obj_index, pred_label_data, pred_label_dict,
                           object_label_data, obj_label_dict):
@@ -152,6 +158,7 @@ def xyxy_cxcywh(x1, y1, x2, y2):
 
     return x_center, y_center, box_height, box_width
 
+
 def merge_cxcywh(box1, box2):
     """
     Generate a larger bounding box that covers both input boxes.
@@ -196,21 +203,19 @@ def calculate_iou(box1, box2, is_only_extension=False, is_original=False):
     x1, y1, w1, h1 = box1
     x2, y2, w2, h2 = box2
 
-    xA = min(x1 + w1/2, x2 + w2/2)
-    xB = max(x1 - w1/2, x2 - w2/2)
+    xA = min(x1 + w1 / 2, x2 + w2 / 2)
+    xB = max(x1 - w1 / 2, x2 - w2 / 2)
 
-    yA = min(y1 + h1/2, y2 + h2/2)
-    yB = max(y1 - h1/2, y2 - h2/2)
+    yA = min(y1 + h1 / 2, y2 + h2 / 2)
+    yB = max(y1 - h1 / 2, y2 - h2 / 2)
 
     inter_area = (xB - xA) * (yB - yA)
 
     box1_area = w1 * h1
     box2_area = w2 * h2
 
-
-
     if is_original:
-      return inter_area / (float(box2_area) + float(box1_area) - inter_area)
+        return inter_area / (float(box2_area) + float(box1_area) - inter_area)
 
     if is_only_extension:
         return inter_area / float(box2_area)
@@ -364,6 +369,7 @@ def cluster_algo(obj_label_data, pred_label_data):
 
     return dict_predIndex_to_objIndex_list
 
+
 def convert_predData_to_relObjData(sg_formatted_data_filepath):
     """
     sg_formatted data directory:
@@ -456,7 +462,7 @@ def convert_predData_to_relObjData(sg_formatted_data_filepath):
                 rel_obj_file.write("\n")
 
 
-def generate_json_data_from_yolo(yolo_data_path = "./"):
+def generate_json_data_from_yolo(yolo_data_path="./"):
     """
     Json file
     { "imgName": [
@@ -514,7 +520,6 @@ def generate_json_data_from_yolo(yolo_data_path = "./"):
         # get index dict of how relationships overlaps with objects bouding
         index_dict = cluster_algo(obj_label_data, rel_obj_label_data)
 
-
         predicate_list, object_dict_to_boundingbox_list = convert_index_to_data(index_dict, rel_obj_label_data,
                                                                                 pred_label_dict, obj_label_data,
                                                                                 obj_label_dict)
@@ -547,7 +552,7 @@ def generate_json_data_from_yolo(yolo_data_path = "./"):
 
 
 def direct_generate_json_data_from_yolo(img_path, obj_label_data, rel_obj_label_data, obj_label_dict, pred_label_dict,
-                                        output_path=""):
+                                        output_path="", save_json=False):
     """
     directly provide the values for generation
     Json file
@@ -597,28 +602,35 @@ def direct_generate_json_data_from_yolo(img_path, obj_label_data, rel_obj_label_
             # each object can have a list of bounding box, each is an instance
             cur_obj_label = object_label
             for x, y, w, h in list_of_boundingbox:
+                # Force Python float after multiplication
+                # print(F"x {x}, y {y}, w {w}, h {h}, width {width}, height {height}, ")
                 relationDict["object"].append({
                     "name": cur_obj_label,
-                    "x": x * width,
-                    "y": y * height,
-                    "w": w * width,
-                    "h": h * height
+                    "x": float(x * width),
+                    "y": float(y * height),
+                    "w": float(w * width),
+                    "h": float(h * height)
                 })
         relationDictList.append(relationDict)
+
     cur_json_list[os.path.basename(img_path)] = relationDictList
+
+    # print(cur_json_list)
 
     # print(relationDictList)
 
     img_filename = os.path.basename(img_path).split(".")[0]
 
-    if not os.path.exists(output_path):
-        create_folder(output_path)
+    if save_json:
 
-    # Print example of how to read the generated file
-    with open(os.path.join(output_path, f"{img_filename}_relationships.json"), 'w') as f:
-        json.dump(cur_json_list, f, indent=2)
+        if not os.path.exists(output_path):
+            create_folder(output_path)
 
+        # Print example of how to read the generated file
+        with open(os.path.join(output_path, f"{img_filename}_relationships.json"), 'w') as f:
+            json.dump(cur_json_list, f, indent=2)
 
+    return cur_json_list
 
 
 if __name__ == "__main__":
