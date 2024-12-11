@@ -121,9 +121,10 @@ class Trainer:
         logging.info(f"Model size: {self.ds.input_size()} x {self.args.layer_1} x {self.args.layer_2} x {self.args.layer_3} x {self.ds.output_size()}")
 
         self.loss_fn = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.SGD(
+        self.optimizer = torch.optim.Adam(
             self.m.parameters(),
-            lr=args.learning_rate
+            lr=args.learning_rate,
+            weight_decay=1e-2,
         )
 
         self.metrics = metrics.Metrics(self.args.metrics_dir)

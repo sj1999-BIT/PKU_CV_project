@@ -1,35 +1,12 @@
 import torch
 import argparse
 import sys
-from dataset import DataSet
+from dataset import Dataset
 from dataset import Bounds
 from glove import Glove
 from model import Model
 
 parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--model",
-    help="Path to a model file to perform inference with",
-    required=True,
-)
-parser.add_argument(
-    "--layer_1",
-    help="Size of layer 1",
-    required=True,
-    type=int,
-)
-parser.add_argument(
-    "--layer_2",
-    help="Size of layer 2",
-    required=True,
-    type=int,
-)
-parser.add_argument(
-    "--layer_3",
-    help="Size of layer 3",
-    required=True,
-    type=int,
-)
 parser.add_argument(
     "--glove",
     help="Path to glove.6B.50d.txt",
