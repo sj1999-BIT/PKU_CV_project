@@ -26,6 +26,33 @@ def generate_random_colour_scheme_for_labels(label_dict):
 
 
 def label_img(label_dict, label_data, img, is_data_from_detection=False, color_list=None):
+    """
+    Draws bounding boxes and labels on an image using YOLO format annotations or detection results.
+
+    This function visualizes object locations by:
+    1. Converting YOLO format coordinates (normalized x,y,w,h) to pixel coordinates
+    2. Drawing bounding boxes with class labels
+    3. Adding confidence scores for detection results
+
+    Args:
+        label_dict (dict): Dictionary mapping class indices to label names
+        label_data (list): List of labels/detections in YOLO format where each item is either:
+            - [label_index, x_center, y_center, width, height] for annotations
+            - [label_index, x_center, y_center, width, height, confidence] for detections
+        img (numpy.ndarray): Input image to draw on (BGR format)
+        is_data_from_detection (bool): If True, expects detection format with confidence scores
+        color_list (list, optional): List of BGR colors for each class. If None, generates random colors
+
+    Returns:
+        numpy.ndarray: Image with drawn bounding boxes and labels
+
+    Note:
+        - Input coordinates should be normalized (0-1) in YOLO format
+        - Converts normalized YOLO format (x_center, y_center, width, height) to pixel coordinates
+        - For detections, adds "Detected_" prefix and confidence score to labels
+        - Uses OpenCV for drawing operations
+        - Default text settings: HERSHEY_SIMPLEX font, size 0.5, thickness 2
+    """
     img_height, img_width, _ = img.shape
 
     # generate random colour if not colour specified
