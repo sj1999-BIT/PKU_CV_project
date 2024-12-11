@@ -1,13 +1,14 @@
-from dataset import DataSet
 import logging
 import argparse
 import sys
 import model
 import torch
 from torch import nn
+from torch.utils import data
 from torch.utils.data import DataLoader
 import os
-from metrics import Metrics
+import metrics
+from dataset import Dataset
 
 parser = argparse.ArgumentParser(
     prog="PredPred",
@@ -52,20 +53,26 @@ parser.add_argument(
 parser.add_argument(
     "--layer_1",
     help="Dimenision of layer 1",
-    default=5000,
     type=int,
+    required=True,
 )
 parser.add_argument(
     "--layer_2",
     help="Dimenision of layer 2",
-    default=10000,
     type=int,
+    required=True,
 )
 parser.add_argument(
     "--layer_3",
     help="Dimenision of layer 3",
-    default=5000,
+    required=True,
     type=int,
+)
+parser.add_argument(
+    "--dropout",
+    help="Probability of dropout",
+    required=True,
+    type=float,
 )
 parser.add_argument(
     "--seed",
@@ -78,61 +85,62 @@ parser.add_argument(
     help="Directory for saving the metrics",
     default="metrics",
 )
-parser.add_argument(
-    "--log_file",
-    help="File to save logs to",
-    default="out.log",
-)
-
 
 class Trainer:
     def __init__(self, args):
         self.args = args
 
-        self.ds = DataSet(args.input, args.split, args.seed)
+        self.ds = Dataset(self.args.input, self.args.device)
+        frac = self.args.split / 100.0
+        train_set, test_set, validation_set = data.random_split(
+            self.ds, [1.0 - 2.0 * frac, frac, frac]
+        )
+
         self.train_set = DataLoader(
-            self.ds.train_set(),
+            train_set,
             batch_size=args.batch_size,
             shuffle=True,
         )
         self.test_set = DataLoader(
-            self.ds.test_set(),
+            test_set,
             batch_size=args.batch_size
         )
         self.validation_set = DataLoader(
-            self.ds.validation_set(),
+            validation_set,
             batch_size=args.batch_size
         )
 
         logging.info("Reading the dataset done")
         logging.info(f"Creating the model on device '{args.device}'")
         self.m = model.Model(
-            110,
+            self.ds.input_size(),
             self.args.layer_1, self.args.layer_2, self.args.layer_3,
-            self.ds.pred_count,
+            self.ds.output_size(),
+            self.args.dropout
         ).to(args.device)
-        logging.info("Creating the model done")
+        logging.info(f"Model size: {self.ds.input_size()} x {self.args.layer_1} x {self.args.layer_2} x {self.args.layer_3} x {self.ds.output_size()}")
 
         self.loss_fn = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.Adam(
+        self.optimizer = torch.optim.SGD(
             self.m.parameters(),
             lr=args.learning_rate
         )
 
-        self.metrics = Metrics(self.args.metrics_dir, self.ds.pred_count)
+        self.metrics = metrics.Metrics(self.args.metrics_dir)
 
         if not os.path.exists(self.args.model_dir):
-            os.mkdir(self.args.model_dir)
+            os.makedirs(self.args.model_dir, exist_ok=True)
 
     def train(self):
         for i in range(0, self.args.epoch_count):
             logging.info(f"==================Epoch {i}=================")
+            self.metrics.start_epoch(i)
             self.train_epoch(i)
             self.validate_epoch(i)
-
-            model_name = f"{self.args.model_dir}/model_{i}.pth"
-            torch.save(self.m.state_dict(), model_name)
             self.metrics.end_epoch(i)
+
+            model_name = f"{self.args.model_dir}/model_{i:05d}.pth"
+            torch.save(self.m.state_dict(), model_name)
 
     def validate_epoch(self, epoch_idx):
         logging.info(f"Validation for epoch {epoch_idx}")
@@ -141,18 +149,17 @@ class Trainer:
         correct = 0
 
         with torch.no_grad():
-            for (x, i) in self.validation_set:
+            for (x, y) in self.validation_set:
                 x = x.to(self.args.device)
-                y = torch.zeros(len(x), self.ds.pred_count).\
-                    scatter_(1, i.unsqueeze(1), 1).\
-                    to(self.args.device)
+                y = y.to(self.args.device)
                 pred = self.m(x)
                 pred_ids = pred.argmax(1).to("cpu")
-                correct += pred_ids.eq(i.to("cpu")).sum().item()
+                actual_ids = y.argmax(1).to("cpu")
+                correct += pred_ids.eq(actual_ids).sum().item()
                 loss_amt = self.loss_fn(pred, y).item()
                 total_loss += loss_amt
 
-                self.metrics.validation_batch(pred_ids, i, loss_amt)
+                self.metrics.validation_batch(pred, y, loss_amt)
 
         avg_loss = total_loss / len(self.validation_set)
         accuracy = correct / len(self.validation_set.dataset)
@@ -171,16 +178,15 @@ class Trainer:
         total_grad_norm = 0.0
         total_loss_amt = 0.0
 
-        for batch, (x, i) in enumerate(self.train_set):
+        for batch, (x, y) in enumerate(self.train_set):
             self.optimizer.zero_grad()
-
             x = x.to(self.args.device)
-            y = torch.zeros(len(x), self.ds.pred_count).\
-                scatter_(1, i.unsqueeze(1), 1).\
-                to(self.args.device)
+            y = y.to(self.args.device)
+
             pred = self.m(x)
             pred_ids = pred.argmax(1).to("cpu")
-            correct += pred_ids.eq(i).sum().item()
+            actual_ids = y.argmax(1).to("cpu")
+            correct += pred_ids.eq(actual_ids).sum().item()
             total += len(x)
             loss = self.loss_fn(pred, y)
 
@@ -191,8 +197,8 @@ class Trainer:
 
             grad_norm = self.grad_norm()
             total_grad_norm += grad_norm
-            self.metrics.training_batch(pred_ids, i, loss_amt, grad_norm)
             batches += 1
+            self.metrics.training_batch(pred, y, loss_amt, grad_norm)
 
             if batch % 1000 == 0 or batch + 1 == size:
                 logging.info(f"Batch {batch}/{size}:")

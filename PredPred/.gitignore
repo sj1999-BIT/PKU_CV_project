@@ -6,4 +6,5 @@ glove.6B.50d.txt
 *.bin
 metrics/
 visuals/
+visuals1/
 dataset/

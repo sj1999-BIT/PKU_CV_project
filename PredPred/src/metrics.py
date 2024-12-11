@@ -3,48 +3,50 @@ import os
 
 
 class Metrics:
-    def __init__(self, metrics_dir, pred_count):
+    def __init__(self, metrics_dir):
         self.metrics_dir = metrics_dir
         if not os.path.exists(self.metrics_dir):
-            os.mkdir(self.metrics_dir)
+            os.makedirs(self.metrics_dir, exist_ok=True)
 
-        self.pred_count = pred_count
-        self.train_cm = torch.zeros(
-            (self.pred_count, self.pred_count),
-            dtype=torch.int64,
-        )
-        self.validation_cm = torch.zeros(
-            (self.pred_count, self.pred_count),
-            dtype=torch.int64,
-        )
+        self.train_pred = []
+        self.train_y = []
+        self.v_pred = []
+        self.v_y = []
         self.train_loss = []
         self.grads = []
-        self.validation_loss = []
+        self.v_loss = []
 
-    def training_batch(self, pred_ids, actual_ids, loss, grad_norm):
+    def training_batch(self, pred, y, loss, grad_norm):
         self.train_loss.append(loss)
         self.grads.append(grad_norm)
-        for i in range(0, len(pred_ids)):
-            self.train_cm[pred_ids[i]][actual_ids[i]] += 1
+        self.train_y.append(y.to("cpu"))
+        self.train_pred.append(pred.to("cpu"))
 
-    def validation_batch(self, pred_ids, actual_ids, loss):
-        self.validation_loss.append(loss)
-        for i in range(0, len(pred_ids)):
-            self.validation_cm[pred_ids[i]][actual_ids[i]] += 1
+    def validation_batch(self, pred, y, loss):
+        self.v_loss.append(loss)
+        self.v_y.append(y.to("cpu"))
+        self.v_pred.append(pred.to("cpu"))
+
+    def start_epoch(self, epoch):
+        pass
 
     def end_epoch(self, epoch):
         torch.save(
             [
+                self.train_pred,
+                self.train_y,
+                self.v_pred,
+                self.v_y,
                 self.grads,
                 self.train_loss,
-                self.validation_loss,
-                self.train_cm,
-                self.validation_cm,
+                self.v_loss,
             ],
-            f"{self.metrics_dir}/metrics_{epoch}.dat",
+            f"{self.metrics_dir}/metrics_{epoch:05d}.bin",
         )
-        self.grads = []
+        self.train_pred = []
+        self.train_y = []
+        self.v_pred = []
+        self.v_y = []
         self.train_loss = []
-        self.validation_loss = []
-        self.train_cm.fill_(0)
-        self.validation_cm.fill_(0)
+        self.grads = []
+        self.v_loss = []
