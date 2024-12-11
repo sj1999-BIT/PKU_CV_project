@@ -199,13 +199,14 @@ def run(runner, input):
     res = {}
     with open(input) as f:
         imgs = json.load(f)
-        for (name, img) in imgs.items():
+        for i, (name, img) in enumerate(imgs.items()):
             res[name] = []
+            print(f"Inferred {i}/{len(imgs)} imgs..")
             for group in img:
                 pred = group["predicate"]
                 idx = None
                 highest = None
-                for (i, w) in runner.all_preds:
+                for (i, w) in enumerate(runner.all_preds):
                     if w == pred:
                         idx = i 
                         break
@@ -223,17 +224,22 @@ def run(runner, input):
                                 subj["name"],
                                 sbb,
                                 pred
-                        )
-                        if highest is None or highest[0] < prob:
-                            highest = (prob, obj, obb, subj, sbb)
+                        )[idx]
+                        if highest is None or highest[0] < prob.item():
+                            highest = (prob, obj["name"], obb, subj["name"], sbb)
 
+                assert highest is not None, name
                 (prob, obj, obb, subj, sbb) = highest
                 res[name].append({
                     "predicate": pred,
                     "object": { "name": obj, "x": obb.x1, "y": obb.y1, "w": obb.size()[0], "h": obb.size()[1]},
                     "subject": { "name": subj, "x": sbb.x1, "y": sbb.y1, "w": sbb.size()[0], "h": sbb.size()[1]},
-                    "prob": prob
+                    "prob": prob.item()
                 })
+
+
+        with open("inference.json", "w") as f:
+            json.dump(res, f, indent=4)
 
 
 if __name__ == "__main__":

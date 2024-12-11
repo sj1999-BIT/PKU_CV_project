@@ -34,10 +34,10 @@ train4:
 	python $(TRAIN_SRC) --input $(DATA_DIR)/subset_4/$(DATASET) --split 10 --learning_rate 0.00001 --layer_1 150 --layer_2 70 --layer_3 20 --metrics_dir $(METRICS_DIR)/subset_4 --device $(DEVICE) --epoch_count 10000 --model_dir $(MODEL_DIR)/subset_4 --dropout 0.3 | tee $(LOG_FILE)
 
 visualize: $(VISUALIZE_SRC)
-	python $(VISUALIZE_SRC) --metrics $(METRICS_DIR)/$(SUBSET) --output $(VISUALIZE_DIR)/$(SUBSET) --dataset $(DATA_DIR)/$(SUBSET)/$(DATASET) --confusion_matrix $(METRICS_DIR)/$(SUBSET)/metrics_00099.bin
+	python $(VISUALIZE_SRC) --metrics $(METRICS_DIR)/$(SUBSET) --output $(VISUALIZE_DIR)/$(SUBSET) --dataset $(DATA_DIR)/$(SUBSET)/$(DATASET) --confusion_matrix $(METRICS_DIR)/$(SUBSET)/metrics_00199.bin
 
 inference: $(INFERENCE_SRC)
-	python $(INFERENCE_SRC) --models models.json --datasets $(DATA_DIR) --weights $(MODEL_DIR) --glove $(GLOVE_FILE) --input relationships.json
+	python $(INFERENCE_SRC) --models models.json --datasets $(DATA_DIR) --weights $(MODEL_DIR) --glove $(GLOVE_FILE) --input ~/Projects/PKU_CV_project/SplitDataset/relationships.json
 
 .PHONY: clean
 clean:
