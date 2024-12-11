@@ -1,10 +1,18 @@
+import argparse
 import os
 import json
 import torch
+import sys
 
-from utils import merge_cxcywh
+rootpath = os.path.join(os.getcwd(), '..')
+sys.path.append(rootpath)
+
+from yolo_utils import cxcywh_to_xyxy
 from pathlib import Path
 from RELTR import cuda_model
+from tqdm import tqdm
+
+
 
 def generatePredYoloData(outputs):
 
@@ -44,12 +52,16 @@ def generatePredYoloData(outputs):
 
         # we now generate the respectively boxes
 
-        x_center, y_center, box_width, box_height = merge_cxcywh(s_box, o_box)
+        # cx1, cy1, w1, h1 = xyxy_cxcywh(s_box[0].item(), s_box[1].item(), s_box[2].item(), s_box[3].item())
+        # cx2, cy2, w2, h2 = xyxy_cxcywh(o_box[0].item(), o_box[1].item(), o_box[2].item(), o_box[3].item())
 
-        yolo_obj_data_output.append([subject_label, s_box[0], s_box[1], s_box[2], s_box[3]])
-        yolo_obj_data_output.append([object_label, o_box[0], o_box[1], o_box[2], o_box[3]])
 
-        yolo_rel_data_output.append([predicate_label, x_center, y_center, box_width, box_height])
+        yolo_obj_data_output.append([subject_label.item(), s_box[0].item(),s_box[1].item(), s_box[2].item(), s_box[3].item()])
+        yolo_obj_data_output.append([object_label.item(), o_box[0].item(), o_box[1].item(), o_box[2].item(), o_box[3].item()])
+
+        yolo_rel_data_output.append([len(yolo_obj_data_output)-1,
+                                     len(yolo_obj_data_output)-2,
+                                     predicate_label.item()])
 
     return yolo_rel_data_output, yolo_obj_data_output
 
@@ -91,7 +103,7 @@ def ReltrDataAnnotation(dataFilePath):
     print(f"Found {len(image_files)} images to process")
 
     # Process each image
-    for image_file in image_files:
+    for image_file in tqdm(image_files, desc="Processing images"):
         try:
             # Get model predictions
             predictions = cuda_model.model_inference(str(image_file))
@@ -116,12 +128,98 @@ def ReltrDataAnnotation(dataFilePath):
 
         except Exception as e:
             print(f"Error processing {image_file.name}: {str(e)}")
+            # Print the contents of the tensor to understand what went wrong
+            if 'yolo_reL_tensor_file' in locals():
+                print("Contents of yolo_reL_tensor_file:", yolo_reL_tensor_file)
+            if 'yolo_obj_tensor_file' in locals():
+                print("Contents of yolo_obj_tensor_file:", yolo_obj_tensor_file)
             continue
+
+
+    print("Annotation process completed")
+    return True
+
+def FormattedReltrDataAnnotation(dataFilePath):
+    """
+    Aim of this function: given a folder named Data:
+        dataset
+           ├── images/               # All image files
+           ├── obj_labels/          # YOLO format object annotations
+           ├── pred_labels/          # Relationship triplet annotations
+    """
+
+    # Convert to Path object for easier path manipulation
+    data_path = Path(dataFilePath)
+    images_path = data_path / "images"
+    rel_labels_path = data_path / "pred_labels"
+    obj_labels_path = data_path / "obj_labels"
+
+    # Validate folder structure
+    if not data_path.exists():
+        raise FileNotFoundError(f"Data folder not found at {dataFilePath}")
+    if not images_path.exists():
+        raise FileNotFoundError(f"Images folder not found at {images_path}")
+    if not rel_labels_path.exists():
+        os.makedirs(rel_labels_path)
+        print(f"Created rel_labels directory at {rel_labels_path}")
+    if not obj_labels_path.exists():
+        os.makedirs(obj_labels_path)
+        print(f"Created obj_labels directory at {obj_labels_path}")
+
+    # Get list of image files
+    image_files = [f for f in images_path.glob("*")
+                   if f.suffix.lower() in {'.jpg', '.jpeg', '.png', '.bmp'}]
+
+    if not image_files:
+        raise ValueError(f"No valid image files found in {images_path}")
+
+    print(f"Found {len(image_files)} images to process")
+
+    # Process each image
+    for image_file in tqdm(image_files, desc="Processing images"):
+        try:
+            # Get model predictions
+            predictions = cuda_model.model_inference(str(image_file))
+
+            yolo_reL_tensor_file, yolo_obj_tensor_file = generatePredYoloData(predictions)
+
+            # Create annotation filename (same name as image but .txt extension)
+            annotation_file = rel_labels_path / f"{image_file.stem}.txt"
+
+            with open(annotation_file, 'w') as f:
+                for yolo_tensor in yolo_reL_tensor_file:
+                    for tensor in yolo_tensor:
+                        f.write(f"{tensor} ")
+                    f.write("\n")
+
+            annotation_file = obj_labels_path / f"{image_file.stem}.txt"
+            with open(annotation_file, 'w') as f:
+                for yolo_tensor in yolo_obj_tensor_file:
+                    for tensor in yolo_tensor:
+                        f.write(f"{tensor} ")
+                    f.write("\n")
+
+        except Exception as e:
+            print(f"Error processing {image_file.name}: {str(e)}")
+            # Print the contents of the tensor to understand what went wrong
+            if 'yolo_reL_tensor_file' in locals():
+                print("Contents of yolo_reL_tensor_file:", yolo_reL_tensor_file)
+            if 'yolo_obj_tensor_file' in locals():
+                print("Contents of yolo_obj_tensor_file:", yolo_obj_tensor_file)
+            continue
+
 
     print("Annotation process completed")
     return True
 
 
 if __name__ == '__main__':
-    data_filepath = "./coco_dataset/4k_data"
-    ReltrDataAnnotation(data_filepath)
+    # parser = argparse.ArgumentParser(description='Process data with ReltrDataAnnotation')
+    # parser.add_argument('--yoloGen_datapath', type=str, help='Path to the data directory')
+    #
+    # args = parser.parse_args()
+    #
+    # print(f"parser.parse_args() {parser.parse_args()}")
+
+    yoloGen_datapath = "../../autodl-tmp/yolo_25K/"
+    FormattedReltrDataAnnotation(yoloGen_datapath)
