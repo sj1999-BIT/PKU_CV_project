@@ -13,7 +13,6 @@ from collections import defaultdict
 
 from tqdm import tqdm
 from yolo_utils.label_utils import *
-from experimental import efficient_cluster_algo
 
 rootpath = os.path.join(os.getcwd(), '..')
 sys.path.append(rootpath)
@@ -727,91 +726,6 @@ def cluster_algo(obj_label_data, pred_label_data):
 
     return dict_predIndex_to_objIndex_list
 
-
-# def cluster_algo(obj_label_data, pred_label_data):
-#     """
-#     Given 2 list of data, return a dict
-#     key: pred yolo label's index in the given label data list
-#     val: list of index of yolo label in original label data that overlaps with this predicate
-#
-#     idea: O(nlogn) algo of interval overlap
-#     1. set dict to map each pred coord to its original index in the input list
-#     2. sort obj label cx in ascending order, sort pred based on leftmost value, get overlapped values
-#     3. repeat for cy
-#     4. keep only obj that overlap both cx and cy
-#     5. run IoU, at least 50% of the obj box must overlap with the pred box
-#     """
-#
-#     dict_predIndex_to_objIndex_list = {}
-#
-#     # convert the cxcywh of pred to xyxy, we also contain the original pred index
-#     xyxy_index_pred_label_data = [[label[0], *cxcywh_to_xyxy(*label[1:]), i] for i, label in enumerate(pred_label_data)]
-#     # sort based on x_min
-#     xyxy_index_pred_label_data.sort(key=lambda x: get_x_min(x))
-#
-#     # preserve original label index in the input obj label list
-#     index_obj_label_data = [[*label, i] for i, label in enumerate(obj_label_data)]
-#     # sort based on center_x
-#     index_obj_label_data.sort(key=lambda x: get_centre_x(x))
-#
-#     # get the original index
-#     def get_original_index(cur_label):
-#         return cur_label[-1]
-#
-#     # each predicate only go through once
-#     cur_sorted_pred_index = 0
-#
-#     # start at index where obj cx is larger than x_min of cur predicate
-#     starting_obj_index = 0
-#
-#     while cur_sorted_pred_index < len(xyxy_index_pred_label_data):
-#         cur_xyxy_pred_label = xyxy_index_pred_label_data[cur_sorted_pred_index]
-#         # we get the range of current predicate
-#         cur_x_min = get_x_min(cur_xyxy_pred_label)
-#         cur_x_max = get_x_max(cur_xyxy_pred_label)
-#         cur_y_min = get_y_min(cur_xyxy_pred_label)
-#         cur_y_max = get_y_max(cur_xyxy_pred_label)
-#
-#         # update starting obj, only care if its still within boundary
-#         while starting_obj_index < len(index_obj_label_data) and \
-#                 get_centre_x(index_obj_label_data[starting_obj_index]) < cur_x_min:
-#             starting_obj_index += 1
-#
-#         cur_sort_obj_index = starting_obj_index
-#         while cur_sort_obj_index < len(index_obj_label_data):
-#             cur_obj_label = index_obj_label_data[cur_sort_obj_index]
-#             if get_centre_x(cur_obj_label) > cur_x_max:
-#                 # out of x boundary, no more obj in range of current predicate
-#                 break
-#             if get_centre_y(cur_obj_label) < cur_y_min or \
-#                     get_centre_y(cur_obj_label) > cur_y_max: \
-#                     # out of y boundary, current obj cannot overlap enough with predicate
-#                 continue
-#
-#             # at this point centre of obj is within the predicate, we can calculate the IoU to confirm
-#             # our IoU function takes in 2 tuple of cx cy w h
-#
-#             original_pred_index = get_original_index(cur_xyxy_pred_label)
-#
-#             pred_box = get_label_box(pred_label_data[original_pred_index])
-#
-#             if calculate_iou(pred_box,
-#                              get_label_box(cur_obj_label),
-#                              is_only_extension=True) < 0.5:
-#                 # insufficient overlap
-#                 continue
-#
-#             if original_pred_index not in dict_predIndex_to_objIndex_list:
-#                 dict_predIndex_to_objIndex_list[original_pred_index] = []
-#             dict_predIndex_to_objIndex_list[original_pred_index].append(get_original_index(cur_obj_label))
-#
-#             # move to next obj
-#             cur_sort_obj_index += 1
-#
-#         # once we done move to next predicate
-#         cur_sorted_pred_index += 1
-#
-#     return dict_predIndex_to_objIndex_list
 
 
 def convert_index_to_data(dict_predIndex_to_obj_index, pred_label_data, pred_label_dict,
