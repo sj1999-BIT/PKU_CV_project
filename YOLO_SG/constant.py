@@ -228,6 +228,8 @@ REL_CLASSES = ['__background__', 'above', 'across', 'against', 'along', 'and', '
                'to', 'under', 'using', 'walking in', 'walking on', 'watching', 'wearing', 'wears', 'with']
 
 if __name__=="__main__":
-    rel_dict = {i-1: rel for i, rel in enumerate(CLASSES)}
-
-    print(rel_dict)
+    # rel_dict = {i-1: rel for i, rel in enumerate(CLASSES)}
+    #
+    # print(rel_dict)
+    for val in REL_CLASSES:
+        print(val)
