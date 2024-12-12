@@ -14,6 +14,15 @@ if __name__ == "__main__":
     img_filenames = os.listdir(testing_img_folder) #list filenames
     print(len(img_filenames)) #debug, should be 100K
 
+if __name__ == "__main__":
+
+
+    testing_img_folder = "testing_images/images"
+
+    label_img_folder = "testing_images/labelled images"
+
+    img_filenames = os.listdir(testing_img_folder)
+
     # Setup progress bar
     pbar = tqdm(img_filenames, desc="Processing Images")
 
@@ -32,6 +41,14 @@ if __name__ == "__main__":
         # compare with ground truth
         # prediction = alexay_get_triplets
         recall, precision = evaluate([prediction], K=20)
+        # for testing
+        # if img_filename != "classroom.png":
+        #     continue
+
+        start_time = time.time()
+        img_filepath = os.path.join(testing_img_folder, img_filename)
+
+        yolo_sg_application(img_filepath, is_save_label_img=True)
 
         # Calculate time for this iteration
         iteration_time = time.time() - start_time
@@ -51,6 +68,7 @@ if __name__ == "__main__":
     
     #TODO:
     # output results
+
 
 
 
