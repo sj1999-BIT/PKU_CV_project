@@ -1,5 +1,19 @@
 from yolo_sg_pipeline import *
 from evaluate_pipeline import *
+import PredPred.src.inference as head
+
+if __name__ == "__main__":
+    
+    # imgpath = "./test/000000000139.jpg"
+    
+    # json_data = yolo_sg_application(imgpath)
+    
+    # print(json_data)
+
+    testing_img_folder = "./VG_100K" #VG dataset image folder no subdirectories
+
+    img_filenames = os.listdir(testing_img_folder) #list filenames
+    print(len(img_filenames)) #debug, should be 100K
 
 if __name__ == "__main__":
     
@@ -20,6 +34,16 @@ if __name__ == "__main__":
     total_time = 0
     num_images = len(img_filenames)
 
+    args = type('obj', (object, ), {
+        "models": "./PredPred/models.json",
+        "device": "cuda",
+        # EDIT THESE:
+        "glove": "path of glove file",
+        "datasets": "path to datasets",
+        "weights": "weights of the models",
+    })
+    runner = head.Runner(args)
+
     for img_filename in pbar:
 
         start_time = time.time()
@@ -32,6 +56,15 @@ if __name__ == "__main__":
         # compare with ground truth
         # prediction = alexay_get_triplets
         recall, precision = evaluate([prediction], K=20)
+        # for testing
+        # if img_filename != "classroom.png":
+        #     continue
+
+        start_time = time.time()
+        img_filepath = os.path.join(testing_img_folder, img_filename)
+
+        img = yolo_sg_application(img_filepath)
+        final_out_json = runner.run_single_image(img_filename, img)
 
         # Calculate time for this iteration
         iteration_time = time.time() - start_time

@@ -1,0 +1,14 @@
+relationships.json
+inference.json
+__pycache__/
+models/
+glove.6B.50d.txt
+*.log
+*.bin
+metrics/
+visuals/
+visuals1/
+dataset/
+prelim/
+*.zip
+data/
