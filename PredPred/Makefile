@@ -37,7 +37,7 @@ visualize: $(VISUALIZE_SRC)
 	python $(VISUALIZE_SRC) --metrics $(METRICS_DIR)/$(SUBSET) --output $(VISUALIZE_DIR)/$(SUBSET) --dataset $(DATA_DIR)/$(SUBSET)/$(DATASET) --confusion_matrix $(METRICS_DIR)/$(SUBSET)/metrics_00199.bin
 
 inference: $(INFERENCE_SRC)
-	python $(INFERENCE_SRC) --models models.json --datasets $(DATA_DIR) --weights $(MODEL_DIR) --glove $(GLOVE_FILE) --device $(DEVICE) --input ~/Projects/PKU_CV_project/SplitDataset/relationships.json
+	python $(INFERENCE_SRC) --models models.json --datasets $(DATA_DIR) --weights $(MODEL_DIR) --glove $(GLOVE_FILE) --device $(DEVICE) --dir data
 
 .PHONY: clean
 clean:

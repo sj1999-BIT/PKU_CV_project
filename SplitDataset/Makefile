@@ -10,7 +10,7 @@ IMAGES := $(VG_DIR)/images
 EXTRA_FLAGS ?= 
 
 $(DATASET): $(SCRIPT) $(PREDS_TXT) $(OBJS_TXT)
-	python $(SCRIPT) --relationships $(RELATIONSHIPS) --vg $(IMAGES) --objs $(OBJS_TXT) --preds $(PREDS_TXT) --image_data $(IMAGE_DATA) --glove $(GLOVE_FILE) --output $(DATASET) --binary --yolo --split --trim $(EXTRA_FLAGS)
+	python $(SCRIPT) --relationships $(RELATIONSHIPS) --vg $(IMAGES) --objs $(OBJS_TXT) --preds $(PREDS_TXT) --image_data $(IMAGE_DATA) --glove $(GLOVE_FILE) --output $(DATASET) --split --trim --yolo $(EXTRA_FLAGS)
 
 build: $(DATASET)
 

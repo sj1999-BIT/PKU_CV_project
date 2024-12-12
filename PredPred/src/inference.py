@@ -268,7 +268,8 @@ def combine_to_one_file(dir):
         assert str.endswith(path, ".json")
         with open(path) as f:
             j = json.load(f)
-            res[fname] = j
+            for k, v in j.items():
+                res[k] = v
     return res
 
 if __name__ == "__main__":
