@@ -27,9 +27,10 @@ if __name__ == "__main__":
 
         json_data = yolo_sg_application(img_filepath) #get yolo clusters (SJ)
         
-        pass json data to alexay to get triplets
-        compare with ground truth
-        prediction = alexay_get_triplets
+        #TODO:
+        # pass json data to alexay to get triplets
+        # compare with ground truth
+        # prediction = alexay_get_triplets
         recall, precision = evaluate([prediction], K=20)
 
         # Calculate time for this iteration
@@ -48,7 +49,8 @@ if __name__ == "__main__":
     print(f"Average time per image: {average_time:.3f} seconds")
     print(f"Average FPS: {fps:.2f}")
     
-    output results
+    #TODO:
+    # output results
 
 
 
