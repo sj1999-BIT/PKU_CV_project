@@ -206,67 +206,69 @@ class Runner:
 
         return res
 
-def run_single_image(runner, name, img):
-    res = []
-    for group in img:
-        pred = group["predicate"]
-        idx = None
-        highest = None
-        for (i, w) in enumerate(runner.all_preds):
-            if w == pred:
-                idx = i 
-                break
-        assert idx is not None
+    def run_single_image(self, name, img):
+        runner = self
+        res = []
+        for group in img:
+            pred = group["predicate"]
+            idx = None
+            highest = None
+            for (i, w) in enumerate(runner.all_preds):
+                if w == pred:
+                    idx = i 
+                    break
+            assert idx is not None
 
-        for obj in group["object"]:
-            obb = Bounds.from_corner_size(obj["x"], obj["y"], obj["w"], obj["h"])
-            for subj in group["object"]:
-                if obj == subj:
-                    continue
-                sbb = Bounds.from_corner_size(subj["x"], subj["y"], subj["w"], subj["h"])
-                prob = runner.eval(
-                        obj["name"],
-                        obb,
-                        subj["name"],
-                        sbb,
-                        pred
-                )[idx]
-                if highest is None or highest[0] < prob.item():
-                    highest = (prob, obj["name"], obb, subj["name"], sbb)
+            for obj in group["object"]:
+                obb = Bounds.from_corner_size(obj["x"], obj["y"], obj["w"], obj["h"])
+                for subj in group["object"]:
+                    if obj == subj:
+                        continue
+                    sbb = Bounds.from_corner_size(subj["x"], subj["y"], subj["w"], subj["h"])
+                    prob = runner.eval(
+                            obj["name"],
+                            obb,
+                            subj["name"],
+                            sbb,
+                            pred
+                    )[idx]
+                    if highest is None or highest[0] < prob.item():
+                        highest = (prob, obj["name"], obb, subj["name"], sbb)
 
-        if highest is None:
-            print("WARNING could not find a triple...")
-            continue
-        (prob, obj, obb, subj, sbb) = highest
-        res.append({
-                "predicate": pred,
-                "object": { "name": obj, "x": obb.x1, "y": obb.y1, "w": obb.size()[0], "h": obb.size()[1]},
-                "subject": { "name": subj, "x": sbb.x1, "y": sbb.y1, "w": sbb.size()[0], "h": sbb.size()[1]},
-                "confidence": prob.item(),
-            })
-    return {name: res}
+            if highest is None:
+                print("WARNING could not find a triple...")
+                continue
+            (prob, obj, obb, subj, sbb) = highest
+            res.append({
+                    "predicate": pred,
+                    "object": { "name": obj, "x": obb.x1, "y": obb.y1, "w": obb.size()[0], "h": obb.size()[1]},
+                    "subject": { "name": subj, "x": sbb.x1, "y": sbb.y1, "w": sbb.size()[0], "h": sbb.size()[1]},
+                    "confidence": prob.item(),
+                })
+        return {name: res}
 
-def run(runner, imgs):
-    res = {}
-    percent_step = 1
-    prev_percent = -percent_step
-    prev_img_cnt = 0
-    prev_time = time.time()
+    def run(self, imgs):
+        runner = self
+        res = {}
+        percent_step = 1
+        prev_percent = -percent_step
+        prev_img_cnt = 0
+        prev_time = time.time()
 
-    for i, (name, img) in enumerate(imgs.items()):
-        if (i * 100) // len(imgs) >= prev_percent + percent_step:
-            prev_percent = (i * 100) // len(imgs)
-            cur_time = time.time()
-            v = (i - prev_img_cnt) / (cur_time - prev_time)
-            print(f"{prev_percent}% done.., at {v} imgs/s")
-            prev_time = cur_time
-            prev_img_cnt = i
+        for i, (name, img) in enumerate(imgs.items()):
+            if (i * 100) // len(imgs) >= prev_percent + percent_step:
+                prev_percent = (i * 100) // len(imgs)
+                cur_time = time.time()
+                v = (i - prev_img_cnt) / (cur_time - prev_time)
+                print(f"{prev_percent}% done.., at {v} imgs/s")
+                prev_time = cur_time
+                prev_img_cnt = i
 
-        img_res = run_single_image(runner, name, img)
-        res[name] = img_res[name]
+            img_res = self.run_single_image(name, img)
+            res[name] = img_res[name]
 
-    with open("inference.json", "w") as f:
-        json.dump(res, f, indent=4)
+        with open("inference.json", "w") as f:
+            json.dump(res, f, indent=4)
 
 
 def combine_to_one_file(dir):
@@ -286,7 +288,7 @@ if __name__ == "__main__":
 
     if args.input is not None:
         f = open(args.input)
-        run(runner, json.load(f))
+        runner.run(json.load(f))
         f.close()
     elif args.dir is not None:
-        run(runner, combine_to_one_file(args.dir))
+        runner.run(combine_to_one_file(args.dir))
