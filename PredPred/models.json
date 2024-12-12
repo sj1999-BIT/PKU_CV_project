@@ -1,0 +1,56 @@
+{
+	"subsets": [
+		["has", "in", "on", "with"], 
+		["behind", "holding", "sitting", "standing", "under", "riding", "attached", "over"], 
+		["carrying", "growing", "covering", "along", "lying", "between", "mounted", "across", "leaning", "underneath", "filled", "touching", "held", "floating", "resting"], 
+		["supporting", "connected", "leading", "stuck", "facing", "atop", "doing", "surrounded", "reaching", "placed", "seated"], 
+		["bordering", "passing", "following", "hugging"]
+	],
+	"params": [
+		{
+			"layer_1": 200,
+			"layer_2": 75,
+			"layer_3": 30,
+			"dropout": 0.3,
+			"learning_rate": 0.0001,
+			"epoch_count": 200,
+			"subset": "subset_0"
+		},
+		{
+			"layer_1": 300,
+			"layer_2": 100,
+			"layer_3": 50,
+			"dropout": 0.3,
+			"learning_rate": 0.0001,
+			"epoch_count": 500,
+			"subset": "subset_1"
+		},
+		{
+			"layer_1": 300,
+			"layer_2": 100,
+			"layer_3": 50,
+			"dropout": 0.3,
+			"learning_rate": 0.00001,
+			"epoch_count": 1000,
+			"subset": "subset_2"
+		},
+		{
+			"layer_1": 300,
+			"layer_2": 100,
+			"layer_3": 50,
+			"dropout": 0.3,
+			"learning_rate": 0.00001,
+			"epoch_count": 1000,
+			"subset": "subset_3"
+		},
+		{
+			"layer_1": 150,
+			"layer_2": 70,
+			"layer_3": 20,
+			"dropout": 0.3,
+			"learning_rate": 0.0001,
+			"epoch_count": 10000,
+			"subset": "subset_4"
+		}
+	]
+}
