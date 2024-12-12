@@ -1,0 +1,74 @@
+[
+	{ "relationships": [
+		{ 
+			"predicate": "predicate1 in img1",
+			"object": {
+				"name": "name of the object",
+				"x": 100,
+				"y": 200,
+				"w": 40,
+				"h" 50
+			},
+			"subject": {
+				"name": "name of the subject",
+				"x": 100,
+				"y": 200,
+				"w": 40,
+				"h" 50
+			}
+		},
+		{ 
+			"predicate": "predicate2 in image 1",
+			"object": {
+				"name": "name of the object",
+				"x": 100,
+				"y": 200,
+				"w": 40,
+				"h" 50
+			},
+			"subject": {
+				"name": "name of the subject",
+				"x": 100,
+				"y": 200,
+				"w": 40,
+				"h" 50
+			}
+		},
+	]},
+	{ "relationships": [
+		{ 
+			"predicate": "predicate1 in img2",
+			"object": {
+				"name": "name of the object",
+				"x": 100,
+				"y": 200,
+				"w": 40,
+				"h" 50
+			},
+			"subject": {
+				"name": "name of the subject",
+				"x": 100,
+				"y": 200,
+				"w": 40,
+				"h" 50
+			}
+		},
+		{ 
+			"predicate": "predicate2 in img2",
+			"object": {
+				"name": "name of the object",
+				"x": 100,
+				"y": 200,
+				"w": 40,
+				"h" 50
+			},
+			"subject": {
+				"name": "name of the subject",
+				"x": 100,
+				"y": 200,
+				"w": 40,
+				"h" 50
+			}
+		}
+	]}
+]
