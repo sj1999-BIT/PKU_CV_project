@@ -120,7 +120,7 @@ def draw_confusion_matrix(args):
     ax.set_xticks(ticks, ds.pred_names)
     ax.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
     ax.tick_params(axis="x", labelrotation=90)
-    ax.imshow(tcm / tcm.sum(dim=0))
+    ax.imshow(tcm / tcm.sum(dim=1))
 
     ax = fig.add_subplot(122)
     ax.set_title("Validation confusion matrix")
@@ -131,7 +131,7 @@ def draw_confusion_matrix(args):
     ax.set_xticks(ticks, ds.pred_names)
     ax.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
     ax.tick_params(axis="x", labelrotation=90)
-    ax.imshow(vcm / vcm.sum(dim=0))
+    ax.imshow(vcm / vcm.sum(dim=1))
 
     plt.savefig(f"{args.output}/confusion.png")
     plt.close()
