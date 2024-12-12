@@ -206,6 +206,46 @@ class Runner:
 
         return res
 
+def run_single_image(runner, name, img):
+    res = []
+    for group in img:
+        pred = group["predicate"]
+        idx = None
+        highest = None
+        for (i, w) in enumerate(runner.all_preds):
+            if w == pred:
+                idx = i 
+                break
+        assert idx is not None
+
+        for obj in group["object"]:
+            obb = Bounds.from_corner_size(obj["x"], obj["y"], obj["w"], obj["h"])
+            for subj in group["object"]:
+                if obj == subj:
+                    continue
+                sbb = Bounds.from_corner_size(subj["x"], subj["y"], subj["w"], subj["h"])
+                prob = runner.eval(
+                        obj["name"],
+                        obb,
+                        subj["name"],
+                        sbb,
+                        pred
+                )[idx]
+                if highest is None or highest[0] < prob.item():
+                    highest = (prob, obj["name"], obb, subj["name"], sbb)
+
+        if highest is None:
+            print("WARNING could not find a triple...")
+            continue
+        (prob, obj, obb, subj, sbb) = highest
+        res.append({
+                "predicate": pred,
+                "object": { "name": obj, "x": obb.x1, "y": obb.y1, "w": obb.size()[0], "h": obb.size()[1]},
+                "subject": { "name": subj, "x": sbb.x1, "y": sbb.y1, "w": sbb.size()[0], "h": sbb.size()[1]},
+                "confidence": prob.item(),
+            })
+    return {name: res}
+
 def run(runner, imgs):
     res = {}
     percent_step = 1
@@ -222,44 +262,8 @@ def run(runner, imgs):
             prev_time = cur_time
             prev_img_cnt = i
 
-        res[name] = []
-        for group in img:
-            pred = group["predicate"]
-            idx = None
-            highest = None
-            for (i, w) in enumerate(runner.all_preds):
-                if w == pred:
-                    idx = i 
-                    break
-            assert idx is not None
-
-            for obj in group["object"]:
-                obb = Bounds.from_corner_size(obj["x"], obj["y"], obj["w"], obj["h"])
-                for subj in group["object"]:
-                    if obj == subj:
-                        continue
-                    sbb = Bounds.from_corner_size(subj["x"], subj["y"], subj["w"], subj["h"])
-                    prob = runner.eval(
-                            obj["name"],
-                            obb,
-                            subj["name"],
-                            sbb,
-                            pred
-                    )[idx]
-                    if highest is None or highest[0] < prob.item():
-                        highest = (prob, obj["name"], obb, subj["name"], sbb)
-
-            if highest is None:
-                print("WARNING could not find a triple...")
-                continue
-            (prob, obj, obb, subj, sbb) = highest
-            res[name].append({
-                "predicate": pred,
-                "object": { "name": obj, "x": obb.x1, "y": obb.y1, "w": obb.size()[0], "h": obb.size()[1]},
-                "subject": { "name": subj, "x": sbb.x1, "y": sbb.y1, "w": sbb.size()[0], "h": sbb.size()[1]},
-                "confidence": prob.item(),
-            })
-
+        img_res = run_single_image(runner, name, img)
+        res[name] = img_res[name]
 
     with open("inference.json", "w") as f:
         json.dump(res, f, indent=4)
