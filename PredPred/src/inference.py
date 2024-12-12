@@ -6,6 +6,8 @@ from glove import Glove
 from model import Model
 import json
 import numpy as np
+import time
+import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -31,7 +33,10 @@ parser.add_argument(
 parser.add_argument(
     "--input",
     help="Path to input.json",
-    required=True,
+)
+parser.add_argument(
+    "--dir",
+    help="Path to a bunch of files"
 )
 parser.add_argument(
     "--device",
@@ -132,7 +137,7 @@ class Runner:
                 weights_only=True,
                 map_location=args.device,
             ))
-            model.to(args.device)
+            model = model.to(args.device)
             model.eval()
 
             for p in self.models["subsets"][i]:
@@ -181,7 +186,9 @@ class Runner:
             ])
             x = x.reshape((1, self.input_size))
 
+            x = x.to(self.args.device)
             y = model["model"](x)
+            y.to("cpu")
             return self.make_y(y[0], model["idx"])
 
     def make_y(self, y, susbset):
@@ -195,55 +202,82 @@ class Runner:
 
         return res
 
-def run(runner, input):
+def run(runner, imgs):
     res = {}
-    with open(input) as f:
-        imgs = json.load(f)
-        for i, (name, img) in enumerate(imgs.items()):
-            res[name] = []
-            print(f"Inferred {i}/{len(imgs)} imgs..")
-            for group in img:
-                pred = group["predicate"]
-                idx = None
-                highest = None
-                for (i, w) in enumerate(runner.all_preds):
-                    if w == pred:
-                        idx = i 
-                        break
-                assert idx is not None
+    percent_step = 1
+    prev_percent = -percent_step
+    prev_img_cnt = 0
+    prev_time = time.time()
 
-                for obj in group["object"]:
-                    obb = Bounds.from_corner_size(obj["x"], obj["y"], obj["w"], obj["h"])
-                    for subj in group["object"]:
-                        if obj == subj:
-                            continue
-                        sbb = Bounds.from_corner_size(subj["x"], subj["y"], subj["w"], subj["h"])
-                        prob = runner.eval(
-                                obj["name"],
-                                obb,
-                                subj["name"],
-                                sbb,
-                                pred
-                        )[idx]
-                        if highest is None or highest[0] < prob.item():
-                            highest = (prob, obj["name"], obb, subj["name"], sbb)
+    for i, (name, img) in enumerate(imgs.items()):
+        if (i * 100) // len(imgs) >= prev_percent + percent_step:
+            prev_percent = (i * 100) // len(imgs)
+            cur_time = time.time()
+            v = (i - prev_img_cnt) / (cur_time - prev_time)
+            print(f"{prev_percent}% done.., at {v} imgs/s")
+            prev_time = cur_time
+            prev_img_cnt = i
 
-                assert highest is not None, name
-                (prob, obj, obb, subj, sbb) = highest
-                res[name].append({
-                    "predicate": pred,
-                    "object": { "name": obj, "x": obb.x1, "y": obb.y1, "w": obb.size()[0], "h": obb.size()[1]},
-                    "subject": { "name": subj, "x": sbb.x1, "y": sbb.y1, "w": sbb.size()[0], "h": sbb.size()[1]},
-                    "prob": prob.item()
-                })
+        res[name] = []
+        for group in img:
+            pred = group["predicate"]
+            idx = None
+            highest = None
+            for (i, w) in enumerate(runner.all_preds):
+                if w == pred:
+                    idx = i 
+                    break
+            assert idx is not None
+
+            for obj in group["object"]:
+                obb = Bounds.from_corner_size(obj["x"], obj["y"], obj["w"], obj["h"])
+                for subj in group["object"]:
+                    if obj == subj:
+                        continue
+                    sbb = Bounds.from_corner_size(subj["x"], subj["y"], subj["w"], subj["h"])
+                    prob = runner.eval(
+                            obj["name"],
+                            obb,
+                            subj["name"],
+                            sbb,
+                            pred
+                    )[idx]
+                    if highest is None or highest[0] < prob.item():
+                        highest = (prob, obj["name"], obb, subj["name"], sbb)
+
+            if highest is None:
+                print("WARNING could not find a triple...")
+                continue
+            (prob, obj, obb, subj, sbb) = highest
+            res[name].append({
+                "predicate": pred,
+                "object": { "name": obj, "x": obb.x1, "y": obb.y1, "w": obb.size()[0], "h": obb.size()[1]},
+                "subject": { "name": subj, "x": sbb.x1, "y": sbb.y1, "w": sbb.size()[0], "h": sbb.size()[1]},
+                "confidence": prob.item(),
+            })
 
 
-        with open("inference.json", "w") as f:
-            json.dump(res, f, indent=4)
+    with open("inference.json", "w") as f:
+        json.dump(res, f, indent=4)
 
+
+def combine_to_one_file(dir):
+    res = {}
+    for fname in os.listdir(dir):
+        path = f"{dir}/{fname}"
+        assert str.endswith(path, ".json")
+        with open(path) as f:
+            j = json.load(f)
+            res[fname] = j
+    return res
 
 if __name__ == "__main__":
     args = parser.parse_args(sys.argv[1:])
     runner = Runner(args)
 
-    run(runner, args.input)
+    if args.input is not None:
+        f = open(args.input)
+        run(runner, json.load(f))
+        f.close()
+    elif args.dir is not None:
+        run(runner, combine_to_one_file(args.dir))
