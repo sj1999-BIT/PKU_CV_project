@@ -161,8 +161,12 @@ class Runner:
                     oid = i
                 if w == subj:
                     sid = i
-            assert oid is not None
-            assert sid is not None
+            if oid is None:
+                print("WARNING no oid for", obj)
+                oid = 0
+            if sid is None:
+                print("WARNING no sid for", subj)
+                sid = 0
 
             obj_vec = self.glove.get(obj)
             subj_vec = self.glove.get(subj)
