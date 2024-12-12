@@ -1,5 +1,6 @@
 from yolo_sg_pipeline import *
 from evaluate_pipeline import *
+import PredPred.src.inference as head
 
 if __name__ == "__main__":
     
@@ -29,6 +30,16 @@ if __name__ == "__main__":
     total_time = 0
     num_images = len(img_filenames)
 
+    args = type('obj', (object, ), {
+        "models": "./PredPred/models.json",
+        "device": "cuda",
+        # EDIT THESE:
+        "glove": "path of glove file",
+        "datasets": "path to datasets",
+        "weights": "weights of the models",
+    })
+    runner = head.Runner(args)
+
     for img_filename in pbar:
 
         start_time = time.time()
@@ -48,7 +59,8 @@ if __name__ == "__main__":
         start_time = time.time()
         img_filepath = os.path.join(testing_img_folder, img_filename)
 
-        yolo_sg_application(img_filepath, is_save_label_img=True)
+        img = yolo_sg_application(img_filepath)
+        final_out_json = runner.run_single_image(img_filename, img)
 
         # Calculate time for this iteration
         iteration_time = time.time() - start_time
