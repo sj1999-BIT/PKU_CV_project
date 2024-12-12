@@ -1,13 +1,18 @@
 from yolo_sg_pipeline import *
+from evaluate_pipeline import *
 
 if __name__ == "__main__":
+    
+    # imgpath = "./test/000000000139.jpg"
+    
+    # json_data = yolo_sg_application(imgpath)
+    
+    # print(json_data)
 
+    testing_img_folder = "./VG_100K" #VG dataset image folder no subdirectories
 
-    testing_img_folder = "testing_images/images"
-
-    label_img_folder = "testing_images/labelled images"
-
-    img_filenames = os.listdir(testing_img_folder)
+    img_filenames = os.listdir(testing_img_folder) #list filenames
+    print(len(img_filenames)) #debug, should be 100K
 
     # Setup progress bar
     pbar = tqdm(img_filenames, desc="Processing Images")
@@ -17,14 +22,15 @@ if __name__ == "__main__":
 
     for img_filename in pbar:
 
-        # for testing
-        # if img_filename != "classroom.png":
-        #     continue
-
         start_time = time.time()
         img_filepath = os.path.join(testing_img_folder, img_filename)
 
-        yolo_sg_application(img_filepath, is_save_label_img=True)
+        json_data = yolo_sg_application(img_filepath) #get yolo clusters (SJ)
+        
+        pass json data to alexay to get triplets
+        compare with ground truth
+        prediction = alexay_get_triplets
+        recall, precision = evaluate([prediction], K=20)
 
         # Calculate time for this iteration
         iteration_time = time.time() - start_time
@@ -41,6 +47,8 @@ if __name__ == "__main__":
     print(f"\nProcessing Complete!")
     print(f"Average time per image: {average_time:.3f} seconds")
     print(f"Average FPS: {fps:.2f}")
+    
+    output results
 
 
 
