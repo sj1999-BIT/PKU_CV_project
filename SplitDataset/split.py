@@ -325,7 +325,7 @@ class Dataset:
                 prev_percent = (i * 100) // len(triples)
                 logging.info(f"{prev_percent}% done...")
 
-        torch.save([xs, ys], f"{prefix}/dataset.bin")
+        torch.save([xs, ys, new_objs.representatives(), new_preds.representatives()], f"{prefix}/dataset.bin")
 
     def yolo_convert(self, i, triples):
         if len(triples) == 0:
