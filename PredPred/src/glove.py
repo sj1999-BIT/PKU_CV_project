@@ -3,7 +3,7 @@ import torch
 
 class Glove:
     def __init__(self, glove_file_path):
-        f = open(glove_file_path, "r")
+        f = open(glove_file_path, "r", encoding="utf-8")
         self.word_to_idx = {}
         self.mat = []
         for i, line in enumerate(f):

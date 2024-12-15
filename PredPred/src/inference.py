@@ -1,9 +1,9 @@
 import torch
 import argparse
 import sys
-from dataset import Dataset
-from glove import Glove
-from model import Model
+from PredPred.src.dataset import Dataset
+from PredPred.src.glove import Glove
+from PredPred.src.model import Model
 import json
 import numpy as np
 import time
@@ -180,7 +180,7 @@ class Runner:
                 torch.tensor([sid], dtype=torch.float),
                 obj_vec,
                 subj_vec,
-                torch.from_numpy(np.repeat(np.concat([
+                torch.from_numpy(np.repeat(np.concatenate([
                     obb.to_array(),
                     sbb.to_array(),
                     oc,
@@ -192,7 +192,9 @@ class Runner:
 
             x = x.to(self.args.device)
             y = model["model"](x)
-            y.to("cpu")
+            y = y.to("cpu")
+            y -= y.min()
+            y /= y.max()
             return self.make_y(y[0], model["idx"])
 
     def make_y(self, y, susbset):
