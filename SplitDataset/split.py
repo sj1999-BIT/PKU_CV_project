@@ -7,23 +7,23 @@ import shutil
 import logging
 import json
 import numpy as np
-import torch
+import math
 
 
 class Bounds:
-    def __init__(self, x1, y1, x2, y2):
-        self.x1 = min(x1, x2)
-        self.y1 = min(y1, y2)
-        self.x2 = max(x1, x2)
-        self.y2 = max(y1, y2)
+    def __init__(self, x1: int, y1: int, x2: int, y2: int):
+        self.x1: int = min(x1, x2)
+        self.y1: int = min(y1, y2)
+        self.x2: int = max(x1, x2)
+        self.y2: int = max(y1, y2)
 
     @staticmethod
-    def from_center_size(center_x, center_y, w, h):
+    def from_center_size(center_x: int, center_y: int, w: int, h: int):
         return Bounds(
-            center_x - w * 0.5,
-            center_y - h * 0.5,
-            center_x + w * 0.5,
-            center_y - h * 0.5,
+            center_x - math.floor(w * 0.5),
+            center_y - math.floor(h * 0.5),
+            center_x + math.floor(w * 0.5),
+            center_y + math.floor(h * 0.5),
         )
 
     @staticmethod
