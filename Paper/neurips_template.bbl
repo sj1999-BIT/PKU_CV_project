@@ -1,0 +1,53 @@
+\begin{thebibliography}{10}
+
+\bibitem{cong2023reltr}
+{\sc Cong, Y., Yang, M.~Y., and Rosenhahn, B.}
+\newblock Reltr: Relation transformer for scene graph generation.
+\newblock {\em IEEE Transactions on Pattern Analysis and Machine Intelligence 45}, 9 (2023), 11169--11183.
+
+\bibitem{desai2021learning}
+{\sc Desai, A., Wu, T.-Y., Tripathi, S., and Vasconcelos, N.}
+\newblock Learning of visual relations: The devil is in the tails.
+\newblock In {\em Proceedings of the IEEE/CVF International Conference on Computer Vision\/} (2021), pp.~15404--15413.
+
+\bibitem{gu2019unpaired}
+{\sc Gu, J., Joty, S., Cai, J., Zhao, H., Yang, X., and Wang, G.}
+\newblock Unpaired image captioning via scene graph alignments.
+\newblock In {\em Proceedings of the IEEE/CVF International Conference on Computer Vision\/} (2019), pp.~10323--10332.
+
+\bibitem{johnson2015image}
+{\sc Johnson, J., Krishna, R., Stark, M., Li, L.-J., Shamma, D., Bernstein, M., and Fei-Fei, L.}
+\newblock Image retrieval using scene graphs.
+\newblock In {\em Proceedings of the IEEE conference on computer vision and pattern recognition\/} (2015), pp.~3668--3678.
+
+\bibitem{krishna2017visual}
+{\sc Krishna, R., Zhu, Y., Groth, O., Johnson, J., Hata, K., Kravitz, J., Chen, S., Kalantidis, Y., Li, L.-J., Shamma, D.~A., et~al.}
+\newblock Visual genome: Connecting language and vision using crowdsourced dense image annotations.
+\newblock {\em International journal of computer vision 123\/} (2017), 32--73.
+
+\bibitem{lecun2015deep}
+{\sc LeCun, Y., Bengio, Y., and Hinton, G.}
+\newblock Deep learning.
+\newblock {\em nature 521}, 7553 (2015), 436--444.
+
+\bibitem{li2022sgtr}
+{\sc Li, R., Zhang, S., and He, X.}
+\newblock Sgtr: End-to-end scene graph generation with transformer.
+\newblock In {\em proceedings of the IEEE/CVF conference on computer vision and pattern recognition\/} (2022), pp.~19486--19496.
+
+\bibitem{li2021bipartite}
+{\sc Li, R., Zhang, S., Wan, B., and He, X.}
+\newblock Bipartite graph network with adaptive message passing for unbiased scene graph generation.
+\newblock In {\em Proceedings of the IEEE/CVF conference on computer vision and pattern recognition\/} (2021), pp.~11109--11119.
+
+\bibitem{yang2018graph}
+{\sc Yang, J., Lu, J., Lee, S., Batra, D., and Parikh, D.}
+\newblock Graph r-cnn for scene graph generation.
+\newblock In {\em Proceedings of the European conference on computer vision (ECCV)\/} (2018), pp.~670--685.
+
+\bibitem{zou2023object}
+{\sc Zou, Z., Chen, K., Shi, Z., Guo, Y., and Ye, J.}
+\newblock Object detection in 20 years: A survey.
+\newblock {\em Proceedings of the IEEE 111}, 3 (2023), 257--276.
+
+\end{thebibliography}
