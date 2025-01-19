@@ -585,7 +585,7 @@ def direct_generate_json_data_from_yolo(img_path, obj_label_data, rel_obj_label_
 
     height, width = img.shape[:2]
 
-    # get index dict of how relationships overlaps with objects bouding
+    # get index dict of how relationships overlaps with objects bounding
     index_dict = cluster_algo(obj_label_data, rel_obj_label_data)
 
     predicate_list, object_dict_to_boundingbox_list = convert_index_to_data(index_dict, rel_obj_label_data,

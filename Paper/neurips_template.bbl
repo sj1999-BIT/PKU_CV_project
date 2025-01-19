@@ -5,6 +5,11 @@
 \newblock End-to-end object detection with transformers.
 \newblock In {\em European conference on computer vision\/} (2020), Springer, pp.~213--229.
 
+\bibitem{chiou2021recovering}
+{\sc Chiou, M.-J., Ding, H., Yan, H., Wang, C., Zimmermann, R., and Feng, J.}
+\newblock Recovering the unbiased scene graphs from the biased ones.
+\newblock In {\em Proceedings of the 29th ACM International Conference on Multimedia\/} (2021), pp.~1581--1590.
+
 \bibitem{cong2023reltr}
 {\sc Cong, Y., Yang, M.~Y., and Rosenhahn, B.}
 \newblock Reltr: Relation transformer for scene graph generation.
@@ -85,6 +90,16 @@
 \newblock Deep variation-structured reinforcement learning for visual relationship and attribute detection.
 \newblock In {\em Proceedings of the IEEE conference on computer vision and pattern recognition\/} (2017), pp.~848--857.
 
+\bibitem{pennington2014glove}
+{\sc Pennington, J., Socher, R., and Manning, C.~D.}
+\newblock Glove: Global vectors for word representation.
+\newblock In {\em Proceedings of the 2014 conference on empirical methods in natural language processing (EMNLP)\/} (2014), pp.~1532--1543.
+
+\bibitem{plummer2020revisiting}
+{\sc Plummer, B.~A., Shih, K.~J., Li, Y., Xu, K., Lazebnik, S., Sclaroff, S., and Saenko, K.}
+\newblock Revisiting image-language networks for open-ended phrase detection.
+\newblock {\em IEEE transactions on pattern analysis and machine intelligence 44}, 4 (2020), 2155--2167.
+
 \bibitem{redmon2016you}
 {\sc Redmon, J.}
 \newblock You only look once: Unified, real-time object detection.
@@ -95,17 +110,18 @@
 \newblock Yolo9000: better, faster, stronger.
 \newblock In {\em Proceedings of the IEEE conference on computer vision and pattern recognition\/} (2017), pp.~7263--7271.
 
-\bibitem{sharmasmart}
-{\sc Sharma, A., Kumar, V., and Longchamps, L.}
-\newblock Smart agricultural technology.
-
 \bibitem{sohan2024review}
 {\sc Sohan, M., Sai~Ram, T., Reddy, R., and Venkata, C.}
 \newblock A review on yolov8 and its advancements.
 \newblock In {\em International Conference on Data Intelligence and Cognitive Informatics\/} (2024), Springer, pp.~529--545.
 
-\bibitem{make5040083}
-{\sc Terven, J., Córdova-Esparza, D.-M., and Romero-González, J.-A.}
+\bibitem{tang2020unbiased}
+{\sc Tang, K., Niu, Y., Huang, J., Shi, J., and Zhang, H.}
+\newblock Unbiased scene graph generation from biased training.
+\newblock In {\em Proceedings of the IEEE/CVF conference on computer vision and pattern recognition\/} (2020), pp.~3716--3725.
+
+\bibitem{terven2023comprehensive}
+{\sc Terven, J., C{\'o}rdova-Esparza, D.-M., and Romero-Gonz{\'a}lez, J.-A.}
 \newblock A comprehensive review of yolo architectures in computer vision: From yolov1 to yolov8 and yolo-nas.
 \newblock {\em Machine Learning and Knowledge Extraction 5}, 4 (2023), 1680--1716.
 
@@ -118,10 +134,20 @@
 {\sc Ultralytics}.
 \newblock Ultralytics yolo11 open-sourced, 2024.
 
+\bibitem{yan2020pcpl}
+{\sc Yan, S., Shen, C., Jin, Z., Huang, J., Jiang, R., Chen, Y., and Hua, X.-S.}
+\newblock Pcpl: Predicate-correlation perception learning for unbiased scene graph generation.
+\newblock In {\em Proceedings of the 28th ACM international conference on multimedia\/} (2020), pp.~265--273.
+
 \bibitem{yang2018graph}
 {\sc Yang, J., Lu, J., Lee, S., Batra, D., and Parikh, D.}
 \newblock Graph r-cnn for scene graph generation.
 \newblock In {\em Proceedings of the European conference on computer vision (ECCV)\/} (2018), pp.~670--685.
+
+\bibitem{yu2020cogtree}
+{\sc Yu, J., Chai, Y., Wang, Y., Hu, Y., and Wu, Q.}
+\newblock Cogtree: Cognition tree loss for unbiased scene graph generation.
+\newblock {\em arXiv preprint arXiv:2009.07526\/} (2020).
 
 \bibitem{zhang2019empirical}
 {\sc Zhang, C., Chao, W.-L., and Xuan, D.}

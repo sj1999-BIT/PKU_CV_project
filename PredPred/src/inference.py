@@ -135,9 +135,9 @@ class Runner:
             model.load_state_dict(torch.load(
                 f"{args.weights}/{m["subset"]}/model_{m["epoch_count"]-1:05d}.pth",
                 weights_only=True,
-                map_location=args.device,
+                map_location=torch.device('cpu')
             ))
-            model = model.to(args.device)
+            model = model.to(torch.device('cpu'))
             model.eval()
 
             for p in self.models["subsets"][i]:
@@ -190,7 +190,7 @@ class Runner:
             ])
             x = x.reshape((1, self.input_size))
 
-            x = x.to(self.args.device)
+            x = x.to(torch.device('cpu'))
             y = model["model"](x)
             y = y.to("cpu")
             y -= y.min()
