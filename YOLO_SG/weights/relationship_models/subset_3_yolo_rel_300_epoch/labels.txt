@@ -1,0 +1,11 @@
+atop
+facing
+surrounded
+connected
+supporting
+placed
+seated
+leading
+reaching
+stuck
+doing
