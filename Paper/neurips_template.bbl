@@ -1,5 +1,10 @@
 \begin{thebibliography}{10}
 
+\bibitem{carion2020end}
+{\sc Carion, N., Massa, F., Synnaeve, G., Usunier, N., Kirillov, A., and Zagoruyko, S.}
+\newblock End-to-end object detection with transformers.
+\newblock In {\em European conference on computer vision\/} (2020), Springer, pp.~213--229.
+
 \bibitem{cong2023reltr}
 {\sc Cong, Y., Yang, M.~Y., and Rosenhahn, B.}
 \newblock Reltr: Relation transformer for scene graph generation.
@@ -10,15 +15,35 @@
 \newblock Learning of visual relations: The devil is in the tails.
 \newblock In {\em Proceedings of the IEEE/CVF International Conference on Computer Vision\/} (2021), pp.~15404--15413.
 
+\bibitem{dornadula2019visual}
+{\sc Dornadula, A., Narcomey, A., Krishna, R., Bernstein, M., and Li, F.-F.}
+\newblock Visual relationships as functions: Enabling few-shot scene graph prediction.
+\newblock In {\em Proceedings of the IEEE/CVF International Conference on Computer Vision Workshops\/} (2019), pp.~0--0.
+
+\bibitem{gao2018image}
+{\sc Gao, L., Wang, B., and Wang, W.}
+\newblock Image captioning with scene-graph based semantic concepts.
+\newblock In {\em Proceedings of the 2018 10th international conference on machine learning and computing\/} (2018), pp.~225--229.
+
 \bibitem{gu2019unpaired}
 {\sc Gu, J., Joty, S., Cai, J., Zhao, H., Yang, X., and Wang, G.}
 \newblock Unpaired image captioning via scene graph alignments.
 \newblock In {\em Proceedings of the IEEE/CVF International Conference on Computer Vision\/} (2019), pp.~10323--10332.
 
+\bibitem{gu2019scene}
+{\sc Gu, J., Zhao, H., Lin, Z., Li, S., Cai, J., and Ling, M.}
+\newblock Scene graph generation with external knowledge and image reconstruction.
+\newblock In {\em Proceedings of the IEEE/CVF conference on computer vision and pattern recognition\/} (2019), pp.~1969--1978.
+
 \bibitem{johnson2015image}
 {\sc Johnson, J., Krishna, R., Stark, M., Li, L.-J., Shamma, D., Bernstein, M., and Fei-Fei, L.}
 \newblock Image retrieval using scene graphs.
 \newblock In {\em Proceedings of the IEEE conference on computer vision and pattern recognition\/} (2015), pp.~3668--3678.
+
+\bibitem{jung2023devil}
+{\sc Jung, D., Kim, S., Kim, W.~H., and Cho, M.}
+\newblock Devil's on the edges: Selective quad attention for scene graph generation.
+\newblock In {\em Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition\/} (2023), pp.~18664--18674.
 
 \bibitem{krishna2017visual}
 {\sc Krishna, R., Zhu, Y., Groth, O., Johnson, J., Hata, K., Kravitz, J., Chen, S., Kalantidis, Y., Li, L.-J., Shamma, D.~A., et~al.}
@@ -30,6 +55,16 @@
 \newblock Deep learning.
 \newblock {\em nature 521}, 7553 (2015), 436--444.
 
+\bibitem{lee2018multi}
+{\sc Lee, C.-W., Fang, W., Yeh, C.-K., and Wang, Y.-C.~F.}
+\newblock Multi-label zero-shot learning with structured knowledge graphs.
+\newblock In {\em Proceedings of the IEEE conference on computer vision and pattern recognition\/} (2018), pp.~1576--1585.
+
+\bibitem{li2024scene}
+{\sc Li, H., Zhu, G., Zhang, L., Jiang, Y., Dang, Y., Hou, H., Shen, P., Zhao, X., Shah, S. A.~A., and Bennamoun, M.}
+\newblock Scene graph generation: A comprehensive survey.
+\newblock {\em Neurocomputing 566\/} (2024), 127052.
+
 \bibitem{li2022sgtr}
 {\sc Li, R., Zhang, S., and He, X.}
 \newblock Sgtr: End-to-end scene graph generation with transformer.
@@ -40,10 +75,30 @@
 \newblock Bipartite graph network with adaptive message passing for unbiased scene graph generation.
 \newblock In {\em Proceedings of the IEEE/CVF conference on computer vision and pattern recognition\/} (2021), pp.~11109--11119.
 
+\bibitem{liang2017deep}
+{\sc Liang, X., Lee, L., and Xing, E.~P.}
+\newblock Deep variation-structured reinforcement learning for visual relationship and attribute detection.
+\newblock In {\em Proceedings of the IEEE conference on computer vision and pattern recognition\/} (2017), pp.~848--857.
+
+\bibitem{redmon2016you}
+{\sc Redmon, J.}
+\newblock You only look once: Unified, real-time object detection.
+\newblock In {\em Proceedings of the IEEE conference on computer vision and pattern recognition\/} (2016).
+
+\bibitem{tripathi2019using}
+{\sc Tripathi, S., Bhiwandiwalla, A., Bastidas, A., and Tang, H.}
+\newblock Using scene graph context to improve image generation.
+\newblock {\em arXiv preprint arXiv:1901.03762\/} (2019).
+
 \bibitem{yang2018graph}
 {\sc Yang, J., Lu, J., Lee, S., Batra, D., and Parikh, D.}
 \newblock Graph r-cnn for scene graph generation.
 \newblock In {\em Proceedings of the European conference on computer vision (ECCV)\/} (2018), pp.~670--685.
+
+\bibitem{zhang2019empirical}
+{\sc Zhang, C., Chao, W.-L., and Xuan, D.}
+\newblock An empirical study on leveraging scene graphs for visual question answering.
+\newblock {\em arXiv preprint arXiv:1907.12133\/} (2019).
 
 \bibitem{zou2023object}
 {\sc Zou, Z., Chen, K., Shi, Z., Guo, Y., and Ye, J.}
