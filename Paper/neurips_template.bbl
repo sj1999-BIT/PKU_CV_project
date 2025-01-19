@@ -35,6 +35,11 @@
 \newblock Scene graph generation with external knowledge and image reconstruction.
 \newblock In {\em Proceedings of the IEEE/CVF conference on computer vision and pattern recognition\/} (2019), pp.~1969--1978.
 
+\bibitem{jin2023fast}
+{\sc Jin, T., Guo, F., Meng, Q., Zhu, S., Xi, X., Wang, W., Mu, Z., and Song, W.}
+\newblock Fast contextual scene graph generation with unbiased context augmentation.
+\newblock In {\em Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition\/} (2023), pp.~6302--6311.
+
 \bibitem{johnson2015image}
 {\sc Johnson, J., Krishna, R., Stark, M., Li, L.-J., Shamma, D., Bernstein, M., and Fei-Fei, L.}
 \newblock Image retrieval using scene graphs.
@@ -85,10 +90,33 @@
 \newblock You only look once: Unified, real-time object detection.
 \newblock In {\em Proceedings of the IEEE conference on computer vision and pattern recognition\/} (2016).
 
+\bibitem{redmon2017yolo9000}
+{\sc Redmon, J., and Farhadi, A.}
+\newblock Yolo9000: better, faster, stronger.
+\newblock In {\em Proceedings of the IEEE conference on computer vision and pattern recognition\/} (2017), pp.~7263--7271.
+
+\bibitem{sharmasmart}
+{\sc Sharma, A., Kumar, V., and Longchamps, L.}
+\newblock Smart agricultural technology.
+
+\bibitem{sohan2024review}
+{\sc Sohan, M., Sai~Ram, T., Reddy, R., and Venkata, C.}
+\newblock A review on yolov8 and its advancements.
+\newblock In {\em International Conference on Data Intelligence and Cognitive Informatics\/} (2024), Springer, pp.~529--545.
+
+\bibitem{make5040083}
+{\sc Terven, J., Córdova-Esparza, D.-M., and Romero-González, J.-A.}
+\newblock A comprehensive review of yolo architectures in computer vision: From yolov1 to yolov8 and yolo-nas.
+\newblock {\em Machine Learning and Knowledge Extraction 5}, 4 (2023), 1680--1716.
+
 \bibitem{tripathi2019using}
 {\sc Tripathi, S., Bhiwandiwalla, A., Bastidas, A., and Tang, H.}
 \newblock Using scene graph context to improve image generation.
 \newblock {\em arXiv preprint arXiv:1901.03762\/} (2019).
+
+\bibitem{ultralytics11}
+{\sc Ultralytics}.
+\newblock Ultralytics yolo11 open-sourced, 2024.
 
 \bibitem{yang2018graph}
 {\sc Yang, J., Lu, J., Lee, S., Batra, D., and Parikh, D.}
