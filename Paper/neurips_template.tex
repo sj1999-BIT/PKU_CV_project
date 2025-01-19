@@ -32,6 +32,7 @@
 \usepackage{microtype}      % microtypography
 \usepackage{xcolor}         % colors
 \bibliographystyle{acm}
+\usepackage{graphicx}
 
 \title{YOLO-SG: An Efficient Framework for Scene Graph Generation}
 
@@ -103,7 +104,7 @@ My name's Charles Young, I'm a 23-year-old who went to undergrad at UC San Diego
 
 \section{Background and Related Work}
 \subsection*{Scene Graph Generation}
-Since beginning in 2015 with Johnson et als. work\cite{johnson2015image}, many works have been published improving upon and expanding the scope of SGG\cite{cong2023reltr,desai2021learning,yang2018graph,li2021bipartite,jung2023devil,li2022sgtr,plummer2020revisiting,jin2023fast,lee2018multi,dornadula2019visual,gu2019scene,tripathi2019using,liang2017deep,tang2020unbiased,chiou2021recovering,yan2020pcpl}. Mainstream works often focus on the development of a two-stage scene graph generation approach composed of an object detection stage and a contextual reasoning stage \cite{yang2018graph,,jung2023devil}. This two-stage approach the is foundation for most modern SGG methods\cite{yang2018graph,desai2021learning,li2021bipartite,dornadula2019visual,gu2019scene}.
+Since beginning in 2015 with Johnson et als. work\cite{johnson2015image}, many works have been published improving upon and expanding the scope of SGG\cite{cong2023reltr,desai2021learning,yang2018graph,li2021bipartite,jung2023devil,li2022sgtr,plummer2020revisiting,jin2023fast,lee2018multi,dornadula2019visual,gu2019scene,tripathi2019using,liang2017deep,tang2020unbiased,chiou2021recovering,yan2020pcpl}. Mainstream works often focus on the development of a two-stage scene graph generation approach composed of an object detection stage and a contextual reasoning stage \cite{yang2018graph,jung2023devil}. This two-stage approach the is foundation for most modern SGG methods\cite{yang2018graph,desai2021learning,li2021bipartite,dornadula2019visual,gu2019scene}.
 The first stage is often completed using pre-trained detection models\cite{carion2020end}, while contextual reasoning is done using a variety of methods, from convolutional neural networks\cite{yang2018graph} to transformers\cite{cong2023reltr}. To address the quadratic growth of computation relative to object count common in two-stage models, recent works have proposed several one-stage approaches to the problem\cite{cong2023reltr,li2022sgtr}. These models leverage transformer architectures to generate a set of triplets using object information and have been shown to be competitive with two-stage models in terms of performance. However, the large number of parameters required in a transformer architecture also slows down the model inference times, preventing the use of these approaches in real-time applications\cite{cong2023reltr,liang2017deep}.
 \paragraph{Long-tailed Distribution Problem}
 Several works have been proposed to mitigate the long-tail bias introduced by the data\cite{tang2020unbiased,yu2020cogtree,chiou2021recovering,jin2023fast}. These works can be split into two categories: approaches that used biased training data paired with extra learning techniques or approaches that attempt to remove bias during training.
@@ -116,25 +117,36 @@ YOLO is a popular object detection model that has been widely used in many compu
 More importantly, the model was able to achieve this at a rate of 45 frames per second, more than enough for real-time applications. Since then, multiple versions of YOLO have been introduced by various different authors, each of which attempt to improve upon the original whilst following its core design philosophy: open source, end-to-end, and one-shot\cite{terven2023comprehensive}. These newer versions often apply novel techniques to achieve greater overall performance, measured by inference speed, training cost, and inference accuracy\cite{terven2023comprehensive,redmon2017yolo9000,sohan2024review}, 
 For our framework, we chose to use the YOLOv11 model due to its higher inference speed compared to YOLOv8 due to the lower number of trained parameters\cite{ultralytics11}. However, it is still possible that performance could be improved using an older version, but this will be left as potential future work.
 
+\section{Framework Design}
 
-\section{Method}
+\begin{figure}
+    \includegraphics[width=\textwidth]{figures/figure4.png}
+  \centering
+  \caption{Example of how a predicate bounding box is determined. Given a man holding a racket, the predicate bounding box for 'holding' bounds both the man and the racket.}
+\end{figure}
+
 \section{Object Detection}
-
 Our proposed framework, YOLO-SG, decouples the process of object and predicate detection by framing both subproblems as standard object detection tasks. Rather than inferring predicates between every pair of detected objects in a computationally expensive second stage, we directly detect "predicate entities" in parallel alongside object detection. By modeling predicates as distinct objects, we leverage YOLOv11\cite{ultralytics11} for both object and predicate recognition. This approach reduces the complexity of pairwise comparisons from $n^2$ operations to a more manageable parallel detection task.
 
 \section{Clustering Algorithm}
 We chose to use an Intersection-Over-Union (IoU) based clustering algorithm to associate detected objects with their corresponding predicates due to its simplicity and low time complexity. Given $n$ objects, the algorithm has a worst-case complexity of $O(n \log n)$. For each predicate entity detected, we calculate the IoU of objects that overlap with the predicate bounds, grouping all objects that have an IOU larger than 0.5 with the predicate bounding box. Due to time constraints, we did not perform experiments to determine the optimal IOU threshold, and this is left as potential future work.
 
-\subsection{Preprocssing}
-Since we need the neural network to interpret words and letters meaningful, we first convert object and and predicate labels into vectors using GLOVE\cite{pennington2014glove}, a word-to-vector library commonly used by other works on SGG\cite{lee2018multi}. 
+\subsection{Preprocessing}
+Since we need the neural network to interpret words and letters meaningfully, we first convert object and and predicate labels into vectors using GLOVE\cite{pennington2014glove}, a word-to-vector library commonly used by other works on SGG tasks\cite{lee2018multi}. 
 
 We use Visual Genome 1.2, a dataset composed of more than 108 thousand images and 2.3 million relationship predicates \cite{krishna2017visual} as our training and test set. To treat predicates as objects, we assign each annotated predicate to a bounding box that encapsulates both the subject and object bounding boxes. For example, given a pair of objects $A,B \in \mathbb{R}^2$ with predicate $r$ in Visual Genome 1.2, we create a new bounding box $R$ that minimally encloses both $A$ and $B$. such that 
 Our dataset are separated into wo
-In order to represent relationships and objects rather than edges between objects, we must add a corresponding predicate bounding box for each relationship triplet. We define the predicate bounding box $R$ as the minimal bounding box that encapsulates both the subject and object bounding boxes. Given a pair of object bounding positions $A,B \in \mathbb{R}^2$ with predicate $r$, we define the predicate bounding box $R$ as
+In order to represent relationships and objects rather than edges between objects, we must add a corresponding predicate bounding box for each relationship triplet. We define the predicate bounding box $R$ as the minimal bounding box that encapsulates both the subject and object bounding boxes. Given a pair of objects $A,B$ bounding positions $(x_1,y_1,x_2,y_2)$ where $x_1 < x_2, y_1 < y_2$ and a predicate $r$, we define the predicate bounding box $R$ as
 $$
-R = (\min(A[1],B[1]), \max(A[2],B[2]))
+R = (\min(A[x_1],B[x_1]),\min(A[y_1],B[y_1]), \max(A[x_2],B[x_2], \max(A[y_2],B[y_2]))
 $$
-This ensures that each predicate is represented as a single entity in the image which encompasses the subject and object. For example, given a 'man' with bounding box $A=[0$ We use the original scene graph annotations to produce a secondary dataset of predicate bounding boxes, each labeled with its corresponding predicate. We now have two datasets which are composed of the same images but different bounding boxes and labels: one has the bounds and labels for objects, while the other has the bounds and labels of predicates. 
+This ensures that each predicate is represented as a single entity in the image which encompasses the subject and object. For example, given a subject with bounding box $A=[100,100,200,200]$ and an object with box $B=[40,140,140,240]$, the bounds for a predicate would be $R=[40,100,200,240]$. We use the original scene graph annotations to produce a secondary dataset of predicate bounding boxes, each labeled with its corresponding predicate. We now have two datasets which are composed of the same images but different bounding boxes and labels: one has the bounds and labels for objects, while the other has the bounds and labels of predicates. 
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{figures/figure1.png}
+  \centering
+  \caption{Example of how a predicate bounding box is determined. Given a man holding a racket, the predicate bounding box for 'holding' bounds both the man and the racket.}
+\end{figure}
 
 \paragraph{Data Splitting}
 We split the dataset as follows. We first sort the predicates found in the dataset by the number of instances associated with each predicate. Next, we separate a number of predicates into their own subset. We determine how many predicates to place into the set by calculating the ratio between the number of a instances containing the most frequently occuring predicate with the number of instances containing the least frequently occuring predicate. It follows that the larger the resulting number, the more unbalanced the dataset. For every subset, we select the largest number of predicates ordered by frequency such that the ratio does not exceed a chosen threshold. 
@@ -159,11 +171,23 @@ Each model is trained using conventional object detection procedures and loss fu
 We start with weights pro the YOLO v11 model on the COCO dataset and evaluate it on the CoCo Dataset on 5 NVIDIA 4090Ti graphics cards. Training took 25 hours, with a maximum epoch of 300 and a batch size of 8. 
 We evaluate our model using mean Recall@50.
 
+\begin{figure}
+    \includegraphics[width=\textwidth]{figures/figure2.png}
+  \centering
+  \caption{Predicate classification results before and after data splitting. The left image shows the confusion matrix on a sample of predicates for a YOLO model that is given the original dataset in its entirety, while the right matrices demonstrate the results of several models with the same architecture trained on subsets of the sample.}
+\end{figure}
+
 \paragraph{Parallel detection}
 For a given test image, we pass it through both the Object YOLO and the predicate YOLO models independently and in parallel. The Object YOLO output gives us a set of detected objects with corresponding bounding boxes and class labels. The predicate YOLO output provides a set of detected "predicate boxes," each with a predicted predicate label.
 
 \paragraph{Clustering and association}
 we need to determine which objects are involved in each detected predicate. We apply a clustering algorithm to group each predicate bounding box $R$ with candidate object bounding boxes that it encloses or overlaps. This gives us one or more candidate subject-object pairs for each predicate detection.
+
+\begin{figure}
+    \includegraphics[width=\textwidth]{figures/figure3.png}
+  \centering
+  \caption{Predicate classification results before and after data splitting. The left image shows the confusion matrix on a sample of predicates for a YOLO model that is given the original dataset in its entirety, while the right matrices demonstrate the results of several models with the same architecture trained on subsets of the sample.}
+\end{figure}
 
 
 \paragraph{Triplet selection using MLP scoring}
@@ -171,7 +195,7 @@ After obtaining two sets of detectionsâ€”one for objects and one for predicatesâ
 \section{Evaluation}
 
 \subsection{Evaluation Metrics}
-The task of scene graph generation can be divided into several subtasks, each with varying levels of difficulty. Predicate classification (PredCLS)\cite{cong2023reltr,jin2023fast,dornadula2019visual} predicts predicates given the subject and object labels and bounds. Scene graph classification (SGCLS)\cite{cong2023reltr,dornadula2019visual} predicts the triplet labels given the bounding boxes. Scene graph detection (SGDET)\cite{cong2023reltr,}, also referred to simply as Scene graph generation (SGGen)\cite{jin2023fast,dornadula2019visual}, predicts the labels and bounding boxes of all three elements.
+The task of scene graph generation can be divided into several subtasks, each with varying levels of difficulty. Predicate classification (PredCLS)\cite{cong2023reltr,jin2023fast,dornadula2019visual} predicts predicates given the subject and object labels and bounds. Scene graph classification (SGCLS)\cite{cong2023reltr,dornadula2019visual} predicts the triplet labels given the bounding boxes. Scene graph detection (SGDET)\cite{cong2023reltr}, also referred to simply as Scene graph generation (SGGen)\cite{jin2023fast,dornadula2019visual}, predicts the labels and bounding boxes of all three elements.
 To evaluate our model, we follow the common standard set by previous works\cite{} and adopt the evaluation metrics recall@K (R@K) and mean recall@K (mR@K). Given a single image, Recall@$k$ is defined as the fraction of ground truth triplets which can be found in the top $k$ triplet predictions. Two triplets are considered equivalent when all three elements (subject, predicate, and object) have been labelled correctly and both object and subject bounding boxes have IoU > 0.5 compared to the ground truth bounding boxes.
 
 \subsection{dataset}
