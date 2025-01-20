@@ -1,0 +1,16 @@
+Cython>=3.0.11
+matplotlib>=3.10.0
+networkx>=3.3
+numpy>=1.23.0
+opencv_python>=4.11.0.86
+Pillow>=8.1.0
+pycocotools>=2.0.8
+PyYAML>=6.0.1
+scipy>=1.8.0
+seaborn>=0.13.2
+six>=1.16.0
+sortedcontainers>=2.4.0
+torch>=2.5.1
+torchvision>=0.20.1
+tqdm>=4.66.5
+ultralytics>=8.3.63

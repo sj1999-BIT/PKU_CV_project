@@ -19,6 +19,7 @@ if __name__ == "__main__":
     # Setup progress bar
     pbar = tqdm(img_filenames, desc="Processing Images")
 
+
     total_time = 0
     num_images = len(img_filenames)
 
@@ -42,7 +43,7 @@ if __name__ == "__main__":
         #     break
         #randomly select 10%
         i = random.randint(1, 10)
-        if i > 1:
+        if i > 3:
             continue
 
         start_time = time.time()
@@ -57,7 +58,7 @@ if __name__ == "__main__":
         prediction = runner.run_single_image(img_filename, json_data[img_filename])
         # print('prediction: ', prediction) #debug
         
-        K = 50
+        K = 100
         recall, precision = evaluate(prediction, K)
         # print(f'Recall@{K}: {recall:.2f}\nPrecision@{K}: {precision:.2f}\n')
         recall_scores.append(recall)
