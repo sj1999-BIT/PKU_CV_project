@@ -42,9 +42,9 @@ if __name__ == "__main__":
         # else:
         #     break
         #randomly select 10%
-        i = random.randint(1, 10)
-        if i > 3:
-            continue
+        # i = random.randint(1, 10)
+        # if i > 1:
+        #     continue
 
         start_time = time.time()
         img_filepath = os.path.join(testing_img_folder, img_filename)
@@ -89,8 +89,8 @@ if __name__ == "__main__":
     # output results
     mean_recall = sum(recall_scores) / len(recall_scores)
     mean_precision = sum(precision_scores) / len(precision_scores)
-    max_recall = max([score for score in recall_scores if score is not 1])
-    # print(f'mean Recall@{K}: {mean_recall:.2f}\nmean Precision@{K} {mean_precision:.2f}')
+    max_recall = max([score for score in recall_scores if score != 1])
+    print(f'mean Recall@{K}: {mean_recall:.2f}\nmean Precision@{K} {mean_precision:.2f}')
     
     results = {
       "K": K,
