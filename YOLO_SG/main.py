@@ -90,7 +90,7 @@ if __name__ == "__main__":
     mean_recall = sum(recall_scores) / len(recall_scores)
     mean_precision = sum(precision_scores) / len(precision_scores)
     max_recall = max([score for score in recall_scores if score != 1])
-    print(f'mean Recall@{K}: {mean_recall:.2f}\nmean Precision@{K} {mean_precision:.2f}')
+    print(f'mean Recall@{K}: {mean_recall:.4f}\nmean Precision@{K} {mean_precision:.4f}')
     
     results = {
       "K": K,
