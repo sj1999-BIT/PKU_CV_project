@@ -58,7 +58,7 @@ if __name__ == "__main__":
         prediction = runner.run_single_image(img_filename, json_data[img_filename])
         # print('prediction: ', prediction) #debug
         
-        K = 100
+        K = 50
         recall, precision = evaluate(prediction, K)
         # print(f'Recall@{K}: {recall:.2f}\nPrecision@{K}: {precision:.2f}\n')
         recall_scores.append(recall)
