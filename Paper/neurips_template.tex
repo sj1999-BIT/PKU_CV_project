@@ -28,11 +28,13 @@
 \usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
 \usepackage{amsfonts}       % blackboard math symbols
+\usepackage{amsmath}
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
 \usepackage{xcolor}         % colors
 \bibliographystyle{acm}
 \usepackage{graphicx}
+\usepackage{multirow}
 
 \title{YOLO-SG: An Efficient Framework for Scene Graph Generation}
 
@@ -50,12 +52,12 @@
   Shui Jie \\
   School of Computer Science\\
   Peking University\\
-  SCHOOL ID HERE <!!!> \\
+  2401112104 \\
   \And
   Aleksei Lobanov \\
   School of Computer Science\\
   Peking University\\
-  SCHOOL ID HERE <!!!> \\
+  2401213370  \\
   \AND
   Lawrence Leroy Chieng Tze Yao \\
   School of Computer Science\\
@@ -86,10 +88,7 @@ The second barrier is the quadratic increase in computation required proportiona
 Recent works have proposed a one-stage approach that leverages transformers to generate a set of triplets using object information\cite{cong2023reltr,li2022sgtr}. However, the large number of parameters required in a transformer architecture also slows down the model inference times, preventing the use of these approaches in real-time applications.
 This paper seeks to address the aforementioned long-tailed data distribution by leveraging the recent advancements in object detection accuracy. To do this, we first reformulate the SGG task into an object detection and classification problem, where each relationship triplet is represented as three objects: the subject, the object, and the relationship predicate.
 By formulating the problem in this way, we can divide the training data into balanced subsets, where every subset consists of predicate classes with a similar number of instances. This allows us to train multiple detection models, each specialized in detecting a subset of predicates. More importantly, we propose this approach as a solution to the long-tailed distribution problem, as these models will have significantly less bias than a single model trained on all predicate instances.
-Specifically, we propose a new framework, YOLO-SG, that leverages the YOLOv11 object detection model\cite{redmon2016you} to detect objects and predicates in parallel. YOLO-SG consists of four main components: object detection, predicate detection, object clustering, and predicate inference. The object and predicate detection module is composed of two sets of YOLOv11 models\cite{redmon2016you}. 
-The first set is trained to detect and label objects, while the second set is trained to detect and label predicates. Additionally, we divide the training data such that every subset consists of 4 predicate classes, where the number of instances of each class in the subset is balanced. By doing so, we obtain multiple unbiased models that detect and label their own set of predicate classes instead of a single heavily biased model that predicts all predicate classes at once.
-The predicate inference module takes the output of the first stage and obtains a list of objects for each predicate using a simple clustering algorithm.
-It then passes every possible pair of objects in this list through a lightweight multilayer perceptron which is trained on the same subset of predicate classes. This then returns confidence scores for that subset of predicates. We then return the triplet with the highest confidence score of the detected predicate as the final output. Since we only use the object labels and positions as inputs as opposed to visual features, we can significantly reduce the number of trained parameters compared to methods that rely on convolutional layers or transformer architectures. We evaluate our model on the Visual Genome 1.2 dataset\cite{krishna2017visual} and demonstrate that our model can achieve competitive performance with state-of-the-art models while maintaining real-time inference speeds.
+Specifically, we propose a new framework, YOLO-SG, that leverages the YOLOv11 object detection model\cite{redmon2016you} to detect objects and predicates in parallel. We evaluate our model on the Visual Genome 1.2 dataset\cite{krishna2017visual} and demonstrate that our model can achieve competitive performance with state-of-the-art models while maintaining real-time inference speeds.
 
 \section{Team Members}
 \subsection*{Shui Jie}
@@ -102,6 +101,11 @@ This project was the first time I had to do anything ML-related, it was a big le
 \subsection*{Charles Young}
 My name's Charles Young, I'm a 23-year-old who went to undergrad at UC San Diego for a bachelor's in Mathematics and Computer Science. I study under Professor Tao Xie, and my research interests include mutation testing, metaheuristics, and developer tool use. I was responsible for writing the report and researching related works to improve our framework. I was able to learn a lot about the current state of the art in scene graph generation and object detection, and I'm grateful to my teammates for their hard work and dedication to the project.
 
+\begin{figure}
+    \includegraphics[width=\textwidth]{figures/figure4.png}
+  \centering
+  \caption{Simple illustration of YOLO-SG's framework.}
+\end{figure}
 \section{Background and Related Work}
 \subsection*{Scene Graph Generation}
 Since beginning in 2015 with Johnson et als. work\cite{johnson2015image}, many works have been published improving upon and expanding the scope of SGG\cite{cong2023reltr,desai2021learning,yang2018graph,li2021bipartite,jung2023devil,li2022sgtr,plummer2020revisiting,jin2023fast,lee2018multi,dornadula2019visual,gu2019scene,tripathi2019using,liang2017deep,tang2020unbiased,chiou2021recovering,yan2020pcpl}. Mainstream works often focus on the development of a two-stage scene graph generation approach composed of an object detection stage and a contextual reasoning stage \cite{yang2018graph,jung2023devil}. This two-stage approach the is foundation for most modern SGG methods\cite{yang2018graph,desai2021learning,li2021bipartite,dornadula2019visual,gu2019scene}.
@@ -118,710 +122,102 @@ More importantly, the model was able to achieve this at a rate of 45 frames per 
 For our framework, we chose to use the YOLOv11 model due to its higher inference speed compared to YOLOv8 due to the lower number of trained parameters\cite{ultralytics11}. However, it is still possible that performance could be improved using an older version, but this will be left as potential future work.
 
 \section{Framework Design}
+ YOLO-SG consists of four main components: an object detection group, a predicate detection group, a clustering stage, and a triplet matching group. The object and predicate detection groups are composed of two sets of YOLOv11 models\cite{redmon2016you}. 
+The first set is trained to detect and label objects, while the second set is trained to detect and label predicates. We then split the training data such that every model is provided with a data points consisting only of a subset of predicates that form a balanced dataset relative to the original dataset. By doing so, we obtain multiple unbiased relationship detection models that bound and label their own set of predicate classes instead of a single heavily biased model that predicts all predicate classes at once.
+The predicate inference module takes the output of the first stage and obtains a list of objects for each predicate using a simple clustering algorithm.
+It then passes every possible pair of objects in this list through a lightweight multilayer perceptron which is trained on the same subset of predicate classes. This then returns confidence scores for that subset of predicates. We then return the triplet with the highest confidence score of the detected predicate as the final output. Since we only use the object labels and positions as inputs as opposed to visual features, we can significantly reduce the number of trained parameters compared to methods that rely on convolutional layers or transformer architectures. 
 
-\begin{figure}
-    \includegraphics[width=\textwidth]{figures/figure4.png}
-  \centering
-  \caption{Example of how a predicate bounding box is determined. Given a man holding a racket, the predicate bounding box for 'holding' bounds both the man and the racket.}
-\end{figure}
+\paragraph{Example} Suppose we have an image containing a man holding a tennis racket. The 'man' and 'racket' would be bounded and labelled by the object detection group, while the 'holding' relationship would be bounded and labelled by the predicate detection group. The clustering stage would then find all objects, including the man and the racket, that are within the bounds of the 'holding' predicate. The triplet matching group would then pass every possible pair of objects in this list through a lightweight multilayer perceptron trained on the 'holding' predicate class and several other classes. The triplet with the highest confidence score for the 'holding' predicate would then be returned as the final output.
 
-\section{Object Detection}
-Our proposed framework, YOLO-SG, decouples the process of object and predicate detection by framing both subproblems as standard object detection tasks. Rather than inferring predicates between every pair of detected objects in a computationally expensive second stage, we directly detect "predicate entities" in parallel alongside object detection. By modeling predicates as distinct objects, we leverage YOLOv11\cite{ultralytics11} for both object and predicate recognition. This approach reduces the complexity of pairwise comparisons from $n^2$ operations to a more manageable parallel detection task.
-
-\section{Clustering Algorithm}
-We chose to use an Intersection-Over-Union (IoU) based clustering algorithm to associate detected objects with their corresponding predicates due to its simplicity and low time complexity. Given $n$ objects, the algorithm has a worst-case complexity of $O(n \log n)$. For each predicate entity detected, we calculate the IoU of objects that overlap with the predicate bounds, grouping all objects that have an IOU larger than 0.5 with the predicate bounding box. Due to time constraints, we did not perform experiments to determine the optimal IOU threshold, and this is left as potential future work.
-
-\subsection{Preprocessing}
+$$
+|\text{predicate classes}| = \frac{|\text{triplets of most frequent class}|}{|\text{triplets of least frequent class}|} \leq \text{threshold}
+$$
+\paragraph{Preprocessing}
 Since we need the neural network to interpret words and letters meaningfully, we first convert object and and predicate labels into vectors using GLOVE\cite{pennington2014glove}, a word-to-vector library commonly used by other works on SGG tasks\cite{lee2018multi}. 
 
-We use Visual Genome 1.2, a dataset composed of more than 108 thousand images and 2.3 million relationship predicates \cite{krishna2017visual} as our training and test set. To treat predicates as objects, we assign each annotated predicate to a bounding box that encapsulates both the subject and object bounding boxes. For example, given a pair of objects $A,B \in \mathbb{R}^2$ with predicate $r$ in Visual Genome 1.2, we create a new bounding box $R$ that minimally encloses both $A$ and $B$. such that 
+To treat predicates as objects, we assign each annotated predicate to a bounding box that encapsulates both the subject and object bounding boxes. For example, given a pair of objects $A,B \in \mathbb{R}^2$ with predicate $r$ in Visual Genome 1.2, we create a new bounding box $R$ that minimally encloses both $A$ and $B$. such that 
 Our dataset are separated into wo
 In order to represent relationships and objects rather than edges between objects, we must add a corresponding predicate bounding box for each relationship triplet. We define the predicate bounding box $R$ as the minimal bounding box that encapsulates both the subject and object bounding boxes. Given a pair of objects $A,B$ bounding positions $(x_1,y_1,x_2,y_2)$ where $x_1 < x_2, y_1 < y_2$ and a predicate $r$, we define the predicate bounding box $R$ as
 $$
 R = (\min(A[x_1],B[x_1]),\min(A[y_1],B[y_1]), \max(A[x_2],B[x_2], \max(A[y_2],B[y_2]))
 $$
-This ensures that each predicate is represented as a single entity in the image which encompasses the subject and object. For example, given a subject with bounding box $A=[100,100,200,200]$ and an object with box $B=[40,140,140,240]$, the bounds for a predicate would be $R=[40,100,200,240]$. We use the original scene graph annotations to produce a secondary dataset of predicate bounding boxes, each labeled with its corresponding predicate. We now have two datasets which are composed of the same images but different bounding boxes and labels: one has the bounds and labels for objects, while the other has the bounds and labels of predicates. 
+This ensures that each predicate is represented as a single entity in the image which encompasses the subject and object. For example, given a subject with bounding box $A=[100,100,200,200]$ and an object with box $B=[40,140,140,240]$, the bounds for a predicate would be $R=[40,100,200,240]$.
+We use the original scene graph annotations to produce a secondary dataset of predicate bounding boxes, each labeled with its corresponding predicate. We now have two datasets which are composed of the same images but different bounding boxes and labels: one has the bounds and labels for objects, while the other has the bounds and labels of predicates. 
 
+\paragraph{Data Splitting}
+We split the dataset as follows. We first sort the predicates found in the dataset by the number of instances associated with each predicate. Next, we separate a number of predicates into their own subset. We determine how many predicates to place into the set by calculating the ratio between the number of a instances containing the most frequently occuring predicate with the number of instances containing the least frequently occuring predicate. It follows that the larger the resulting number, the more unbalanced the dataset. For every subset, we select the largest number of predicates ordered by frequency such that the ratio does not exceed a chosen threshold. 
+
+\paragraph{Object Detection}
+Our proposed framework, YOLO-SG, decouples the process of object and predicate detection by framing both as object detection tasks. Rather than inferring predicates between every pair of detected objects in a computationally expensive second stage, we directly detect "predicate entities" in parallel alongside object detection. By modeling predicates as distinct objects, we leverage YOLOv11\cite{ultralytics11} for both object and predicate recognition. 
 \begin{figure}
     \includegraphics[width=\textwidth]{figures/figure1.png}
   \centering
   \caption{Example of how a predicate bounding box is determined. Given a man holding a racket, the predicate bounding box for 'holding' bounds both the man and the racket.}
 \end{figure}
 
-\paragraph{Data Splitting}
-We split the dataset as follows. We first sort the predicates found in the dataset by the number of instances associated with each predicate. Next, we separate a number of predicates into their own subset. We determine how many predicates to place into the set by calculating the ratio between the number of a instances containing the most frequently occuring predicate with the number of instances containing the least frequently occuring predicate. It follows that the larger the resulting number, the more unbalanced the dataset. For every subset, we select the largest number of predicates ordered by frequency such that the ratio does not exceed a chosen threshold. 
+\paragraph{Clustering Algorithm}
+We chose to use an Intersection-Over-Union (IoU) based clustering algorithm to associate detected objects with their corresponding predicates due to its simplicity and low time complexity. Given $n$ objects, the algorithm has a worst-case complexity of $O(n \log n)$. For each predicate entity detected, we calculate the IoU of objects that overlap with the predicate bounds, grouping all objects that have an IOU larger than 0.5 with the predicate bounding box. Due to time constraints, we did not perform experiments to determine the optimal IOU threshold, and this is left as potential future work.
 
-\paragraph{Metric}
+\paragraph{Triplet Matching}
+After obtaining a list of objects for each predicate, we need to determine which object pair is most likely to be associated with the predicate. We use a lightweight multilayer perceptron (MLP) to score the plausibility of each object pair. The MLP has a total of <!!!> GLOVE vectors corresponding to the objects, the bou  has three fully connected layers with ReLU activation functions. The is trained on the same subset of predicate classes as the predicate detection model. For each predicate detection, we run the MLP once for every potential object pair that can be formed by objects in the list, selecting the triplet which returns the highest confidence score for the predicate class label.
 
-\paragraph{Cleaning}
-One significant issue with the Visual Genome dataset is that it contains a large number of object and predicate labels which are semantically equivalent to one another (for example, 'under' and 'below'). In a recent release, the maintainers of the dataset has provided us with a collection of synonym sets that group similar objects and predicates into the same class, with one term assigned by group. After converting all synonymous terms to their respective group representative term, we remove objects which rarely appear along with any associated triplets. 
+\section{Experiment}
+\subsection{Dataset}
+We use the Visual Genome (VG) 1.2 dataset, a dataset widely used for SGG benchmarking that is composed of more than 108 thousand images and 2.3 million relationship predicates \cite{krishna2017visual} as our training and test set.
+note that the Visual Genome dataset contains a large number of object and predicate labels which are semantically equivalent to one another (for example, 'under' and 'below'). In a recent release, the maintainers of the dataset has provided us with a collection of synonym sets that group similar objects and predicates into the same class, with one term assigned by group. After converting all synonymous terms to their respective group representative term, we remove objects which rarely appear along with any associated triplets. 
+After preprocessing, we split VG into training and test sets in the manner proposed by \cite{xu2017scene} as it is most commonly used by similar works\cite{cong2023reltr,yang2018graph}. We end up with a training set containing 73k images and a test set containing 35k images. 
 
-
-
-\subsection{Model training}
-
-
-\paragraph{Object detection models}
-Here we arrive at the long-tailed distribution problem. For objects, we train a YOLO model on objects 
-Object YOLO: Trained on the object dataset, this model detects all objects in a given image.
-predicate YOLO: Trained on the predicate dataset, this model detects all predicate entities $R$ in the same image.
-Each model is trained using conventional object detection procedures and loss functions, taking advantage of YOLO’s efficient architecture. By isolating objects and predicates into their own detection tasks, we allow each model to specialize and minimize biases that often arise when both tasks are intertwined.
-
-\subsection{Inference}
-We start with weights pro the YOLO v11 model on the COCO dataset and evaluate it on the CoCo Dataset on 5 NVIDIA 4090Ti graphics cards. Training took 25 hours, with a maximum epoch of 300 and a batch size of 8. 
-We evaluate our model using mean Recall@50.
+\subsection{Training}
+Since the data used in every module is independent of the performance of other modules, we train every module in parallel. 
+We train both the object detection and predicate detection models using the YOLOv11 architecture on the same images. However, we only train the object dection models on the bounding box class labels provided by the dataset. For the predicate detection model, we use the predicate bounding boxes that we created during preprocessing. During training, We set the learning rate to 0.0001, the batch size to 32, and the maximum epochs to 300. We train the YOLO models on 5 NVIDIA 4090Ti graphics cards, with training taking 25 hours to complete. The multi-layer perceptrons used for triplet matching are trained using the information of the triplets for the predicate classes that the model is specialized in classifying. Since the number of trained parameters is significantly lower, training the MLPs on a single NVIDIA 3060 graphics card takes only 2 hours.
 
 \begin{figure}
     \includegraphics[width=\textwidth]{figures/figure2.png}
   \centering
-  \caption{Predicate classification results before and after data splitting. The left image shows the confusion matrix on a sample of predicates for a YOLO model that is given the original dataset in its entirety, while the right matrices demonstrate the results of several models with the same architecture trained on subsets of the sample.}
+  \caption{Illustration of dataset splitting results. The left histogram shows the data distribution of the top 50 most frequent predicate classes, while the two right histograms show the distributions of two predicate subsets after splitting. In this example, the threshold ratio is set to 5.}
 \end{figure}
-
-\paragraph{Parallel detection}
-For a given test image, we pass it through both the Object YOLO and the predicate YOLO models independently and in parallel. The Object YOLO output gives us a set of detected objects with corresponding bounding boxes and class labels. The predicate YOLO output provides a set of detected "predicate boxes," each with a predicted predicate label.
-
-\paragraph{Clustering and association}
-we need to determine which objects are involved in each detected predicate. We apply a clustering algorithm to group each predicate bounding box $R$ with candidate object bounding boxes that it encloses or overlaps. This gives us one or more candidate subject-object pairs for each predicate detection.
 
 \begin{figure}
     \includegraphics[width=\textwidth]{figures/figure3.png}
   \centering
   \caption{Predicate classification results before and after data splitting. The left image shows the confusion matrix on a sample of predicates for a YOLO model that is given the original dataset in its entirety, while the right matrices demonstrate the results of several models with the same architecture trained on subsets of the sample.}
 \end{figure}
-
-
-\paragraph{Triplet selection using MLP scoring}
-After obtaining two sets of detections—one for objects and one for predicates—we need the determine the subject and object associated with each triplet. For every predicate bounding box and label, we collect a list of detected objects have have a large overlap within the predicate box. To select the most like subject-object pair associated with the label, we use a lightweight MLP classifier trained to score the plausibility of a triplet (subject, predicate, object). For each predicate detection, we run the MLP once with every potential object pair that can be formed by objects in the list, selecting the triplet which returns the highest confidence score. 
-\section{Evaluation}
-
 \subsection{Evaluation Metrics}
 The task of scene graph generation can be divided into several subtasks, each with varying levels of difficulty. Predicate classification (PredCLS)\cite{cong2023reltr,jin2023fast,dornadula2019visual} predicts predicates given the subject and object labels and bounds. Scene graph classification (SGCLS)\cite{cong2023reltr,dornadula2019visual} predicts the triplet labels given the bounding boxes. Scene graph detection (SGDET)\cite{cong2023reltr}, also referred to simply as Scene graph generation (SGGen)\cite{jin2023fast,dornadula2019visual}, predicts the labels and bounding boxes of all three elements.
-To evaluate our model, we follow the common standard set by previous works\cite{} and adopt the evaluation metrics recall@K (R@K) and mean recall@K (mR@K). Given a single image, Recall@$k$ is defined as the fraction of ground truth triplets which can be found in the top $k$ triplet predictions. Two triplets are considered equivalent when all three elements (subject, predicate, and object) have been labelled correctly and both object and subject bounding boxes have IoU > 0.5 compared to the ground truth bounding boxes.
-
-\subsection{dataset}
-\subsection{setting}
-\subsection{implementation}
-\subsection{results}
-\section{Conclusion}
-\section{Submission of papers to NeurIPS 2024}
-
-
-Please read the instructions below carefully and follow them faithfully.
-
-
-\subsection{Style}
-
-
-Papers to be submitted to NeurIPS 2024 must be prepared according to the
-instructions presented here. Papers may only be up to {\bf nine} pages long,
-including figures. Additional pages \emph{containing only acknowledgments and
-references} are allowed. Papers that exceed the page limit will not be
-reviewed, or in any other way considered for presentation at the conference.
-
-
-The margins in 2024 are the same as those in previous years.
-
-
-Authors are required to use the NeurIPS \LaTeX{} style files obtainable at the
-NeurIPS website as indicated below. Please make sure you use the current files
-and not previous versions. Tweaking the style files may be grounds for
-rejection.
-
-
-\subsection{Retrieval of style files}
-
-
-The style files for NeurIPS and other conference information are available on
-the website at
-\begin{center}
-  \url{http://www.neurips.cc/}
-\end{center}
-The file \verb+neurips_2024.pdf+ contains these instructions and illustrates the
-various formatting requirements your NeurIPS paper must satisfy.
-
-
-The only supported style file for NeurIPS 2024 is \verb+neurips_2024.sty+,
-rewritten for \LaTeXe{}.  \textbf{Previous style files for \LaTeX{} 2.09,
-  Microsoft Word, and RTF are no longer supported!}
-
-
-The \LaTeX{} style file contains three optional arguments: \verb+final+, which
-creates a camera-ready copy, \verb+preprint+, which creates a preprint for
-submission to, e.g., arXiv, and \verb+nonatbib+, which will not load the
-\verb+natbib+ package for you in case of package clash.
-
-
-\paragraph{Preprint option}
-
-
-If you wish to post a preprint of your work online, e.g., on arXiv, using the
-NeurIPS style, please use the \verb+preprint+ option. This will create a
-nonanonymized version of your work with the text ``Preprint. Work in progress.''
-in the footer. This version may be distributed as you see fit, as long as you do not say which conference it was submitted to. Please \textbf{do
-  not} use the \verb+final+ option, which should \textbf{only} be used for
-papers accepted to NeurIPS.
-
-
-At submission time, please omit the \verb+final+ and \verb+preprint+
-options. This will anonymize your submission and add line numbers to aid
-review. Please do \emph{not} refer to these line numbers in your paper as they
-will be removed during generation of camera-ready copies.
-
-
-The file \verb+neurips_2024.tex+ may be used as a ``shell'' for writing your
-paper. All you have to do is replace the author, title, abstract, and text of
-the paper with your own.
-
-
-The formatting instructions contained in these style files are summarized in
-Sections \ref{gen_inst}, \ref{headings}, and \ref{others} below.
-
-
-\section{General formatting instructions}
-\label{gen_inst}
-
-
-The text must be confined within a rectangle 5.5~inches (33~picas) wide and
-9~inches (54~picas) long. The left margin is 1.5~inch (9~picas).  Use 10~point
-type with a vertical spacing (leading) of 11~points.  Times New Roman is the
-preferred typeface throughout, and will be selected for you by default.
-Paragraphs are separated by \nicefrac{1}{2}~line space (5.5 points), with no
-indentation.
-
-
-The paper title should be 17~point, initial caps/lower case, bold, centered
-between two horizontal rules. The top rule should be 4~points thick and the
-bottom rule should be 1~point thick. Allow \nicefrac{1}{4}~inch space above and
-below the title to rules. All pages should start at 1~inch (6~picas) from the
-top of the page.
-
-
-For the final version, authors' names are set in boldface, and each name is
-centered above the corresponding address. The lead author's name is to be listed
-first (left-most), and the co-authors' names (if different address) are set to
-follow. If there is only one co-author, list both author and co-author side by
-side.
-
-Please pay special attention to the instructions in Section \ref{others}
-regarding figures, tables, acknowledgments, and references.
-
-
-\section{Headings: first level}
-\label{headings}
-
-
-All headings should be lower case (except for first word and proper nouns),
-flush left, and bold.
-
-
-First-level headings should be in 12-point type.
-
-
-\subsection{Headings: second level}
-
-
-Second-level headings should be in 10-point type.
-
-
-\subsubsection{Headings: third level}
-
-
-Third-level headings should be in 10-point type.
-
-
-\paragraph{Paragraphs}
-
-
-There is also a \verb+\paragraph+ command available, which sets the heading in
-bold, flush left, and inline with the text, with the heading followed by 1\,em
-of space.
-
-
-\section{Citations, figures, tables, references}
-\label{others}
-
-
-These instructions apply to everyone.
-
-
-\subsection{Citations within the text}
-
-
-The \verb+natbib+ package will be loaded for you by default.  Citations may be
-author/year or numeric, as long as you maintain internal consistency.  As to the
-format of the references themselves, any style is acceptable as long as it is
-used consistently.
-
-
-The documentation for \verb+natbib+ may be found at
-\begin{center}
-  \url{http://mirrors.ctan.org/macros/latex/contrib/natbib/natnotes.pdf}
-\end{center}
-Of note is the command \verb+\citet+, which produces citations appropriate for
-use in inline text.  For example,
-\begin{verbatim}
-   \citet{hasselmo} investigated\dots
-\end{verbatim}
-produces
-\begin{quote}
-  Hasselmo, et al.\ (1995) investigated\dots
-\end{quote}
-
-
-If you wish to load the \verb+natbib+ package with options, you may add the
-following before loading the \verb+neurips_2024+ package:
-\begin{verbatim}
-   \PassOptionsToPackage{options}{natbib}
-\end{verbatim}
-
-
-If \verb+natbib+ clashes with another package you load, you can add the optional
-argument \verb+nonatbib+ when loading the style file:
-\begin{verbatim}
-   \usepackage[nonatbib]{neurips_2024}
-\end{verbatim}
-
-
-As submission is double blind, refer to your own published work in the third
-person. That is, use ``In the previous work of Jones et al.\ [4],'' not ``In our
-previous work [4].'' If you cite your other papers that are not widely available
-(e.g., a journal paper under review), use anonymous author names in the
-citation, e.g., an author of the form ``A.\ Anonymous'' and include a copy of the anonymized paper in the supplementary material.
-
-
-\subsection{Footnotes}
-
-
-Footnotes should be used sparingly.  If you do require a footnote, indicate
-footnotes with a number\footnote{Sample of the first footnote.} in the
-text. Place the footnotes at the bottom of the page on which they appear.
-Precede the footnote with a horizontal rule of 2~inches (12~picas).
-
-
-Note that footnotes are properly typeset \emph{after} punctuation
-marks.\footnote{As in this example.}
-
-
-\subsection{Figures}
-
-
-\begin{figure}
-  \centering
-  \fbox{\rule[-.5cm]{0cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
-  \caption{Sample figure caption.}
-\end{figure}
-
-
-All artwork must be neat, clean, and legible. Lines should be dark enough for
-purposes of reproduction. The figure number and caption always appear after the
-figure. Place one line space before the figure caption and one line space after
-the figure. The figure caption should be lower case (except for first word and
-proper nouns); figures are numbered consecutively.
-
-
-You may use color figures.  However, it is best for the figure captions and the
-paper body to be legible if the paper is printed in either black/white or in
-color.
-
-
-\subsection{Tables}
-
-
-All tables must be centered, neat, clean and legible.  The table number and
-title always appear before the table.  See Table~\ref{sample-table}.
-
-
-Place one line space before the table title, one line space after the
-table title, and one line space after the table. The table title must
-be lower case (except for first word and proper nouns); tables are
-numbered consecutively.
-
-
-Note that publication-quality tables \emph{do not contain vertical rules.} We
-strongly suggest the use of the \verb+booktabs+ package, which allows for
-typesetting high-quality, professional tables:
-\begin{center}
-  \url{https://www.ctan.org/pkg/booktabs}
-\end{center}
-This package was used to typeset Table~\ref{sample-table}.
-
-
-\begin{table}
-  \caption{Sample table title}
-  \label{sample-table}
-  \centering
-  \begin{tabular}{lll}
-    \toprule
-    \multicolumn{2}{c}{Part}                   \\
-    \cmidrule(r){1-2}
-    Name     & Description     & Size ($\mu$m) \\
-    \midrule
-    Dendrite & Input terminal  & $\sim$100     \\
-    Axon     & Output terminal & $\sim$10      \\
-    Soma     & Cell body       & up to $10^6$  \\
-    \bottomrule
-  \end{tabular}
+Due to time constraints, we only evaluate the model on the SGGen. This is already sufficient, as SGGen is the most difficult task and the one that we are chiefly concerned about. We follow the common standard set by previous works\cite{cong2023reltr, yang2018graph, li2022sgtr, jin2023fast, yan2020pcpl} and adopt the evaluation metric mean recall@K (mR@K). Given a single image, Recall@$k$ is defined as the fraction of ground truth triplets which can be found in the top $k$ triplet predictions. Two triplets are considered equivalent when all three elements (subject, predicate, and object) have been labelled correctly and both object and subject bounding boxes have IoU > 0.5 compared to the ground truth bounding boxes. We compute the mean recall at K=50 and K=100 for our experiments. 
+
+\subsection{Results}
+\begin{table}[]
+\caption{Comparison of YOLO-SG with other state-of-the-art models on the Visual Genome 1.2 dataset. the best results in each category are bolded.}
+    \centering
+\begin{tabular}{cccc}
+\hline
+\multirow{2}{*}{Method} & \multicolumn{2}{c|}{SGGen} & \multirow{2}{*}{FPS}  \\
+                        & mR@50       & mR@100       &      \\ \hline
+RelTr                   & 10.8        & 12.6         & 16.3 \\
+SGTR                    & 15.8        & \textbf{20.1}         & 3.8  \\
+C-SGG                   & 14.8        & 17.1         & 33.5 \\
+G-RCNN                  & 6.1        & 7.2         & -    \\
+BGNN                    & 10.7        & 12.6         & 2.9 \\
+PCPL                    & 10.4        & 14.4         & -    \\
+MOTIFS                  & 5.7         & -            & 6.6  \\ \hline
+\textbf{YOLO-SG} (ours)                 & \textbf{17.5}        & 17.5            & \textbf{43.3} \\ \hline
+\end{tabular}
 \end{table}
 
-\subsection{Math}
-Note that display math in bare TeX commands will not create correct line numbers for submission. Please use LaTeX (or AMSTeX) commands for unnumbered display math. (You really shouldn't be using \$\$ anyway; see \url{https://tex.stackexchange.com/questions/503/why-is-preferable-to} and \url{https://tex.stackexchange.com/questions/40492/what-are-the-differences-between-align-equation-and-displaymath} for more information.)
-
-\subsection{Final instructions}
-
-Do not change any aspects of the formatting parameters in the style files.  In
-particular, do not modify the width or length of the rectangle the text should
-fit into, and do not change font sizes (except perhaps in the
-\textbf{References} section; see below). Please note that pages should be
-numbered.
+Our model achieves a mean recall of 17.5 at K=50 and K=100, outperforming all other models in the comparison. We also achieve the highest inference speed of 43.3 frames per second, which is significantly higher than other models, clearly demonstrating the effectiveness of our approach. Compared to C-SGG\cite{jin2023fast}, which inspired our MLP triplet matching stage, we achieve both higher recall and higher inference speed. This is likely due to the fact that our model is able to leverage the high accuracy of YOLOv11 in object detection, an important component of the scene graph generation task. 
+\paragraph{Threats to Validity}
+Despite our very promising results, there are many additional changes and further experiments that need to be made in order for the validity of our results to be strong, as there are multiple reasons besides the design of our architecture for the higher performance.
+Since we used the recently-released YOLOv11 architecture, it is possible that the higher performance is due to the improvements made in the architecture itself, as older models that we compare against use older, less optimized architectures. Additionally, we only evaluate our model on the SGGen task, and it is possible that results on the PredCLS and SGCLS tasks can reveal flaws or further potential improvements in the design of YOLO-SG.
+Also note that for all other models that we compare YOLO-SG, recall consistently increases with a higher $K$, yet does not increase for YOLO-SG. We believe that this is due to a flaw in our implementation, as the number of predictions must be equal to the number of relationship predicates.
+Hence, while other models will make multiple predictions with the same predicate but multiple different object-subjects, our will only make one, hence limiting the effect that increasing K has on performance. We can alleviate this problem by including multiple predictions for the same predicate, ranked by confidence score. 
 
 
-\section{Preparing PDF files}
-
-
-Please prepare submission files with paper size ``US Letter,'' and not, for
-example, ``A4.''
-
-
-Fonts were the main cause of problems in the past years. Your PDF file must only
-contain Type 1 or Embedded TrueType fonts. Here are a few instructions to
-achieve this.
-
-
-\begin{itemize}
-
-
-\item You should directly generate PDF files using \verb+pdflatex+.
-
-
-\item You can check which fonts a PDF files uses.  In Acrobat Reader, select the
-  menu Files$>$Document Properties$>$Fonts and select Show All Fonts. You can
-  also use the program \verb+pdffonts+ which comes with \verb+xpdf+ and is
-  available out-of-the-box on most Linux machines.
-
-
-\item \verb+xfig+ "patterned" shapes are implemented with bitmap fonts.  Use
-  "solid" shapes instead.
-
-
-\item The \verb+\bbold+ package almost always uses bitmap fonts.  You should use
-  the equivalent AMS Fonts:
-\begin{verbatim}
-   \usepackage{amsfonts}
-\end{verbatim}
-followed by, e.g., \verb+\mathbb{R}+, \verb+\mathbb{N}+, or \verb+\mathbb{C}+
-for $\mathbb{R}$, $\mathbb{N}$ or $\mathbb{C}$.  You can also use the following
-workaround for reals, natural and complex:
-\begin{verbatim}
-   \newcommand{\RR}{I\!\!R} %real numbers
-   \newcommand{\Nat}{I\!\!N} %natural numbers
-   \newcommand{\CC}{I\!\!\!\!C} %complex numbers
-\end{verbatim}
-Note that \verb+amsfonts+ is automatically loaded by the \verb+amssymb+ package.
-
-
-\end{itemize}
-
-
-If your file contains type 3 fonts or non embedded TrueType fonts, we will ask
-you to fix it.
-
-
-\subsection{Margins in \LaTeX{}}
-
-
-Most of the margin problems come from figures positioned by hand using
-\verb+\special+ or other commands. We suggest using the command
-\verb+\includegraphics+ from the \verb+graphicx+ package. Always specify the
-figure width as a multiple of the line width as in the example below:
-\begin{verbatim}
-   \usepackage[pdftex]{graphicx} ...
-   \includegraphics[width=0.8\linewidth]{myfile.pdf}
-\end{verbatim}
-See Section 4.4 in the graphics bundle documentation
-(\url{http://mirrors.ctan.org/macros/latex/required/graphics/grfguide.pdf})
-
-
-A number of width problems arise when \LaTeX{} cannot properly hyphenate a
-line. Please give LaTeX hyphenation hints using the \verb+\-+ command when
-necessary.
-
-\begin{ack}
-Use unnumbered first level headings for the acknowledgments. All acknowledgments
-go at the end of the paper before the list of references. Moreover, you are required to declare
-funding (financial activities supporting the submitted work) and competing interests (related financial activities outside the submitted work).
-More information about this disclosure can be found at: \url{https://neurips.cc/Conferences/2024/PaperInformation/FundingDisclosure}.
-
-
-Do {\bf not} include this section in the anonymized submission, only in the final paper. You can use the \texttt{ack} environment provided in the style file to automatically hide this section in the anonymized submission.
-\end{ack}
-
-\section*{References}
-
-
-References follow the acknowledgments in the camera-ready paper. Use unnumbered first-level heading for
-the references. Any choice of citation style is acceptable as long as you are
-consistent. It is permissible to reduce the font size to \verb+small+ (9 point)
-when listing the references.
-Note that the Reference section does not count towards the page limit.
-\medskip
-
-\bibliography{citations}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\appendix
-
-\section{Appendix / supplemental material}
-
-
-Optionally include supplemental material (complete proofs, additional experiments and plots) in appendix.
-All such materials \textbf{SHOULD be included in the main submission.}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusions}
+In this work, we propose YOLO-SG, a novel scene graph generation framework that redefines the task of SGG by treating relationships as objects. By using multiple detection models in parallel, We to reduce the long-tail bias caused by the data distribution while at the same time achieving competitive performance and speed with state-of-the-art models. However, there is still a signficant amount of future work required to solidify the validity of the study. We still need to conduct an ablation study to determine the impacts of YOLOv11 on the model's performance by changing to older versions. We also need to conduct exploratory experiments to fine-tune the model parameters, notably the IoU threshold for clustering and the split factor. Finally, we need to resolve some minor flaws that were discovered after evaluation, such as the limiting of predictions to one per predicate found. We believe that with these changes, YOLO-SG can become a powerful tool that offers a new perspective on  scene graph generation.
 
 \newpage
-\section*{NeurIPS Paper Checklist}
-
-%%% BEGIN INSTRUCTIONS %%%
-The checklist is designed to encourage best practices for responsible machine learning research, addressing issues of reproducibility, transparency, research ethics, and societal impact. Do not remove the checklist: {\bf The papers not including the checklist will be desk rejected.} The checklist should follow the references and follow the (optional) supplemental material.  The checklist does NOT count towards the page
-limit. 
-
-Please read the checklist guidelines carefully for information on how to answer these questions. For each question in the checklist:
-\begin{itemize}
-    \item You should answer \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item \answerNA{} means either that the question is Not Applicable for that particular paper or the relevant information is Not Available.
-    \item Please provide a short (1–2 sentence) justification right after your answer (even for NA). 
-   % \item {\bf The papers not including the checklist will be desk rejected.}
-\end{itemize}
-
-{\bf The checklist answers are an integral part of your paper submission.} They are visible to the reviewers, area chairs, senior area chairs, and ethics reviewers. You will be asked to also include it (after eventual revisions) with the final version of your paper, and its final version will be published with the paper.
-
-The reviewers of your paper will be asked to use the checklist as one of the factors in their evaluation. While "\answerYes{}" is generally preferable to "\answerNo{}", it is perfectly acceptable to answer "\answerNo{}" provided a proper justification is given (e.g., "error bars are not reported because it would be too computationally expensive" or "we were unable to find the license for the dataset we used"). In general, answering "\answerNo{}" or "\answerNA{}" is not grounds for rejection. While the questions are phrased in a binary way, we acknowledge that the true answer is often more nuanced, so please just use your best judgment and write a justification to elaborate. All supporting evidence can appear either in the main paper or the supplemental material, provided in appendix. If you answer \answerYes{} to a question, in the justification please point to the section(s) where related material for the question can be found.
-
-IMPORTANT, please:
-\begin{itemize}
-    \item {\bf Delete this instruction block, but keep the section heading ``NeurIPS paper checklist"},
-    \item  {\bf Keep the checklist subsection headings, questions/answers and guidelines below.}
-    \item {\bf Do not modify the questions and only use the provided macros for your answers}.
-\end{itemize} 
- 
-
-%%% END INSTRUCTIONS %%%
-
-
-\begin{enumerate}
-
-\item {\bf Claims}
-    \item[] Question: Do the main claims made in the abstract and introduction accurately reflect the paper's contributions and scope?
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer NA means that the abstract and introduction do not include the claims made in the paper.
-        \item The abstract and/or introduction should clearly state the claims made, including the contributions made in the paper and important assumptions and limitations. A No or NA answer to this question will not be perceived well by the reviewers. 
-        \item The claims made should match theoretical and experimental results, and reflect how much the results can be expected to generalize to other settings. 
-        \item It is fine to include aspirational goals as motivation as long as it is clear that these goals are not attained by the paper. 
-    \end{itemize}
-
-\item {\bf Limitations}
-    \item[] Question: Does the paper discuss the limitations of the work performed by the authors?
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer NA means that the paper has no limitation while the answer No means that the paper has limitations, but those are not discussed in the paper. 
-        \item The authors are encouraged to create a separate "Limitations" section in their paper.
-        \item The paper should point out any strong assumptions and how robust the results are to violations of these assumptions (e.g., independence assumptions, noiseless settings, model well-specification, asymptotic approximations only holding locally). The authors should reflect on how these assumptions might be violated in practice and what the implications would be.
-        \item The authors should reflect on the scope of the claims made, e.g., if the approach was only tested on a few datasets or with a few runs. In general, empirical results often depend on implicit assumptions, which should be articulated.
-        \item The authors should reflect on the factors that influence the performance of the approach. For example, a facial recognition algorithm may perform poorly when image resolution is low or images are taken in low lighting. Or a speech-to-text system might not be used reliably to provide closed captions for online lectures because it fails to handle technical jargon.
-        \item The authors should discuss the computational efficiency of the proposed algorithms and how they scale with dataset size.
-        \item If applicable, the authors should discuss possible limitations of their approach to address problems of privacy and fairness.
-        \item While the authors might fear that complete honesty about limitations might be used by reviewers as grounds for rejection, a worse outcome might be that reviewers discover limitations that aren't acknowledged in the paper. The authors should use their best judgment and recognize that individual actions in favor of transparency play an important role in developing norms that preserve the integrity of the community. Reviewers will be specifically instructed to not penalize honesty concerning limitations.
-    \end{itemize}
-
-\item {\bf Theory Assumptions and Proofs}
-    \item[] Question: For each theoretical result, does the paper provide the full set of assumptions and a complete (and correct) proof?
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer NA means that the paper does not include theoretical results. 
-        \item All the theorems, formulas, and proofs in the paper should be numbered and cross-referenced.
-        \item All assumptions should be clearly stated or referenced in the statement of any theorems.
-        \item The proofs can either appear in the main paper or the supplemental material, but if they appear in the supplemental material, the authors are encouraged to provide a short proof sketch to provide intuition. 
-        \item Inversely, any informal proof provided in the core of the paper should be complemented by formal proofs provided in appendix or supplemental material.
-        \item Theorems and Lemmas that the proof relies upon should be properly referenced. 
-    \end{itemize}
-
-    \item {\bf Experimental Result Reproducibility}
-    \item[] Question: Does the paper fully disclose all the information needed to reproduce the main experimental results of the paper to the extent that it affects the main claims and/or conclusions of the paper (regardless of whether the code and data are provided or not)?
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer NA means that the paper does not include experiments.
-        \item If the paper includes experiments, a No answer to this question will not be perceived well by the reviewers: Making the paper reproducible is important, regardless of whether the code and data are provided or not.
-        \item If the contribution is a dataset and/or model, the authors should describe the steps taken to make their results reproducible or verifiable. 
-        \item Depending on the contribution, reproducibility can be accomplished in various ways. For example, if the contribution is a novel architecture, describing the architecture fully might suffice, or if the contribution is a specific model and empirical evaluation, it may be necessary to either make it possible for others to replicate the model with the same dataset, or provide access to the model. In general. releasing code and data is often one good way to accomplish this, but reproducibility can also be provided via detailed instructions for how to replicate the results, access to a hosted model (e.g., in the case of a large language model), releasing of a model checkpoint, or other means that are appropriate to the research performed.
-        \item While NeurIPS does not require releasing code, the conference does require all submissions to provide some reasonable avenue for reproducibility, which may depend on the nature of the contribution. For example
-        \begin{enumerate}
-            \item If the contribution is primarily a new algorithm, the paper should make it clear how to reproduce that algorithm.
-            \item If the contribution is primarily a new model architecture, the paper should describe the architecture clearly and fully.
-            \item If the contribution is a new model (e.g., a large language model), then there should either be a way to access this model for reproducing the results or a way to reproduce the model (e.g., with an open-source dataset or instructions for how to construct the dataset).
-            \item We recognize that reproducibility may be tricky in some cases, in which case authors are welcome to describe the particular way they provide for reproducibility. In the case of closed-source models, it may be that access to the model is limited in some way (e.g., to registered users), but it should be possible for other researchers to have some path to reproducing or verifying the results.
-        \end{enumerate}
-    \end{itemize}
-
-
-\item {\bf Open access to data and code}
-    \item[] Question: Does the paper provide open access to the data and code, with sufficient instructions to faithfully reproduce the main experimental results, as described in supplemental material?
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer NA means that paper does not include experiments requiring code.
-        \item Please see the NeurIPS code and data submission guidelines (\url{https://nips.cc/public/guides/CodeSubmissionPolicy}) for more details.
-        \item While we encourage the release of code and data, we understand that this might not be possible, so “No” is an acceptable answer. Papers cannot be rejected simply for not including code, unless this is central to the contribution (e.g., for a new open-source benchmark).
-        \item The instructions should contain the exact command and environment needed to run to reproduce the results. See the NeurIPS code and data submission guidelines (\url{https://nips.cc/public/guides/CodeSubmissionPolicy}) for more details.
-        \item The authors should provide instructions on data access and preparation, including how to access the raw data, preprocessed data, intermediate data, and generated data, etc.
-        \item The authors should provide scripts to reproduce all experimental results for the new proposed method and baselines. If only a subset of experiments are reproducible, they should state which ones are omitted from the script and why.
-        \item At submission time, to preserve anonymity, the authors should release anonymized versions (if applicable).
-        \item Providing as much information as possible in supplemental material (appended to the paper) is recommended, but including URLs to data and code is permitted.
-    \end{itemize}
-
-
-\item {\bf Experimental Setting/Details}
-    \item[] Question: Does the paper specify all the training and test details (e.g., data splits, hyperparameters, how they were chosen, type of optimizer, etc.) necessary to understand the results?
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer NA means that the paper does not include experiments.
-        \item The experimental setting should be presented in the core of the paper to a level of detail that is necessary to appreciate the results and make sense of them.
-        \item The full details can be provided either with the code, in appendix, or as supplemental material.
-    \end{itemize}
-
-\item {\bf Experiment Statistical Significance}
-    \item[] Question: Does the paper report error bars suitably and correctly defined or other appropriate information about the statistical significance of the experiments?
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer NA means that the paper does not include experiments.
-        \item The authors should answer "Yes" if the results are accompanied by error bars, confidence intervals, or statistical significance tests, at least for the experiments that support the main claims of the paper.
-        \item The factors of variability that the error bars are capturing should be clearly stated (for example, train/test split, initialization, random drawing of some parameter, or overall run with given experimental conditions).
-        \item The method for calculating the error bars should be explained (closed form formula, call to a library function, bootstrap, etc.)
-        \item The assumptions made should be given (e.g., Normally distributed errors).
-        \item It should be clear whether the error bar is the standard deviation or the standard error of the mean.
-        \item It is OK to report 1-sigma error bars, but one should state it. The authors should preferably report a 2-sigma error bar than state that they have a 96\% CI, if the hypothesis of Normality of errors is not verified.
-        \item For asymmetric distributions, the authors should be careful not to show in tables or figures symmetric error bars that would yield results that are out of range (e.g. negative error rates).
-        \item If error bars are reported in tables or plots, The authors should explain in the text how they were calculated and reference the corresponding figures or tables in the text.
-    \end{itemize}
-
-\item {\bf Experiments Compute Resources}
-    \item[] Question: For each experiment, does the paper provide sufficient information on the computer resources (type of compute workers, memory, time of execution) needed to reproduce the experiments?
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer NA means that the paper does not include experiments.
-        \item The paper should indicate the type of compute workers CPU or GPU, internal cluster, or cloud provider, including relevant memory and storage.
-        \item The paper should provide the amount of compute required for each of the individual experimental runs as well as estimate the total compute. 
-        \item The paper should disclose whether the full research project required more compute than the experiments reported in the paper (e.g., preliminary or failed experiments that didn't make it into the paper). 
-    \end{itemize}
-    
-\item {\bf Code Of Ethics}
-    \item[] Question: Does the research conducted in the paper conform, in every respect, with the NeurIPS Code of Ethics \url{https://neurips.cc/public/EthicsGuidelines}?
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer NA means that the authors have not reviewed the NeurIPS Code of Ethics.
-        \item If the authors answer No, they should explain the special circumstances that require a deviation from the Code of Ethics.
-        \item The authors should make sure to preserve anonymity (e.g., if there is a special consideration due to laws or regulations in their jurisdiction).
-    \end{itemize}
-
-
-\item {\bf Broader Impacts}
-    \item[] Question: Does the paper discuss both potential positive societal impacts and negative societal impacts of the work performed?
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer NA means that there is no societal impact of the work performed.
-        \item If the authors answer NA or No, they should explain why their work has no societal impact or why the paper does not address societal impact.
-        \item Examples of negative societal impacts include potential malicious or unintended uses (e.g., disinformation, generating fake profiles, surveillance), fairness considerations (e.g., deployment of technologies that could make decisions that unfairly impact specific groups), privacy considerations, and security considerations.
-        \item The conference expects that many papers will be foundational research and not tied to particular applications, let alone deployments. However, if there is a direct path to any negative applications, the authors should point it out. For example, it is legitimate to point out that an improvement in the quality of generative models could be used to generate deepfakes for disinformation. On the other hand, it is not needed to point out that a generic algorithm for optimizing neural networks could enable people to train models that generate Deepfakes faster.
-        \item The authors should consider possible harms that could arise when the technology is being used as intended and functioning correctly, harms that could arise when the technology is being used as intended but gives incorrect results, and harms following from (intentional or unintentional) misuse of the technology.
-        \item If there are negative societal impacts, the authors could also discuss possible mitigation strategies (e.g., gated release of models, providing defenses in addition to attacks, mechanisms for monitoring misuse, mechanisms to monitor how a system learns from feedback over time, improving the efficiency and accessibility of ML).
-    \end{itemize}
-    
-\item {\bf Safeguards}
-    \item[] Question: Does the paper describe safeguards that have been put in place for responsible release of data or models that have a high risk for misuse (e.g., pretrained language models, image generators, or scraped datasets)?
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer NA means that the paper poses no such risks.
-        \item Released models that have a high risk for misuse or dual-use should be released with necessary safeguards to allow for controlled use of the model, for example by requiring that users adhere to usage guidelines or restrictions to access the model or implementing safety filters. 
-        \item Datasets that have been scraped from the Internet could pose safety risks. The authors should describe how they avoided releasing unsafe images.
-        \item We recognize that providing effective safeguards is challenging, and many papers do not require this, but we encourage authors to take this into account and make a best faith effort.
-    \end{itemize}
-
-\item {\bf Licenses for existing assets}
-    \item[] Question: Are the creators or original owners of assets (e.g., code, data, models), used in the paper, properly credited and are the license and terms of use explicitly mentioned and properly respected?
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer NA means that the paper does not use existing assets.
-        \item The authors should cite the original paper that produced the code package or dataset.
-        \item The authors should state which version of the asset is used and, if possible, include a URL.
-        \item The name of the license (e.g., CC-BY 4.0) should be included for each asset.
-        \item For scraped data from a particular source (e.g., website), the copyright and terms of service of that source should be provided.
-        \item If assets are released, the license, copyright information, and terms of use in the package should be provided. For popular datasets, \url{paperswithcode.com/datasets} has curated licenses for some datasets. Their licensing guide can help determine the license of a dataset.
-        \item For existing datasets that are re-packaged, both the original license and the license of the derived asset (if it has changed) should be provided.
-        \item If this information is not available online, the authors are encouraged to reach out to the asset's creators.
-    \end{itemize}
-
-\item {\bf New Assets}
-    \item[] Question: Are new assets introduced in the paper well documented and is the documentation provided alongside the assets?
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer NA means that the paper does not release new assets.
-        \item Researchers should communicate the details of the dataset/code/model as part of their submissions via structured templates. This includes details about training, license, limitations, etc. 
-        \item The paper should discuss whether and how consent was obtained from people whose asset is used.
-        \item At submission time, remember to anonymize your assets (if applicable). You can either create an anonymized URL or include an anonymized zip file.
-    \end{itemize}
-
-\item {\bf Crowdsourcing and Research with Human Subjects}
-    \item[] Question: For crowdsourcing experiments and research with human subjects, does the paper include the full text of instructions given to participants and screenshots, if applicable, as well as details about compensation (if any)? 
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer NA means that the paper does not involve crowdsourcing nor research with human subjects.
-        \item Including this information in the supplemental material is fine, but if the main contribution of the paper involves human subjects, then as much detail as possible should be included in the main paper. 
-        \item According to the NeurIPS Code of Ethics, workers involved in data collection, curation, or other labor should be paid at least the minimum wage in the country of the data collector. 
-    \end{itemize}
-
-\item {\bf Institutional Review Board (IRB) Approvals or Equivalent for Research with Human Subjects}
-    \item[] Question: Does the paper describe potential risks incurred by study participants, whether such risks were disclosed to the subjects, and whether Institutional Review Board (IRB) approvals (or an equivalent approval/review based on the requirements of your country or institution) were obtained?
-    \item[] Answer: \answerTODO{} % Replace by \answerYes{}, \answerNo{}, or \answerNA{}.
-    \item[] Justification: \justificationTODO{}
-    \item[] Guidelines:
-    \begin{itemize}
-        \item The answer NA means that the paper does not involve crowdsourcing nor research with human subjects.
-        \item Depending on the country in which research is conducted, IRB approval (or equivalent) may be required for any human subjects research. If you obtained IRB approval, you should clearly state this in the paper. 
-        \item We recognize that the procedures for this may vary significantly between institutions and locations, and we expect authors to adhere to the NeurIPS Code of Ethics and the guidelines for their institution. 
-        \item For initial submissions, do not include any information that would break anonymity (if applicable), such as the institution conducting the review.
-    \end{itemize}
-
-\end{enumerate}
-
-
+\bibliography{citations}
 \end{document}
 
 

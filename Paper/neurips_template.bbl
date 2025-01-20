@@ -134,6 +134,11 @@
 {\sc Ultralytics}.
 \newblock Ultralytics yolo11 open-sourced, 2024.
 
+\bibitem{xu2017scene}
+{\sc Xu, D., Zhu, Y., Choy, C.~B., and Fei-Fei, L.}
+\newblock Scene graph generation by iterative message passing.
+\newblock In {\em Proceedings of the IEEE conference on computer vision and pattern recognition\/} (2017), pp.~5410--5419.
+
 \bibitem{yan2020pcpl}
 {\sc Yan, S., Shen, C., Jin, Z., Huang, J., Jiang, R., Chen, Y., and Hua, X.-S.}
 \newblock Pcpl: Predicate-correlation perception learning for unbiased scene graph generation.
