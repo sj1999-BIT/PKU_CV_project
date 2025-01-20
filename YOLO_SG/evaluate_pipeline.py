@@ -232,7 +232,7 @@ def evaluate(predictions, K):
     global ground_truth
 
     if ground_truth is None:
-        with open('../ground_truth.json', 'r') as gt_file:
+        with open('./ground_truth.json', 'r') as gt_file:
             ground_truth = json.load(gt_file)
 
     recall = recall_at_k(predictions, ground_truth, K)
